@@ -26,10 +26,10 @@ export default function App() {
   }
 
   return (
-    <>
+    <div className="App">
       <MassaLogo className="logo" size={100} />
       <h2>Greeting message:</h2>
       <h1>{greeting}</h1>
-    </>
+    </div>
   );
 }
