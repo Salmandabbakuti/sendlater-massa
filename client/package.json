@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@ant-design/icons": "^6.0.0",
+    "@ant-design/v5-patch-for-react-19": "^1.0.3",
     "@massalabs/massa-web3": "^5.2.0",
     "@massalabs/react-ui-kit": "^1.1.0",
     "@massalabs/wallet-provider": "^3.2.0",

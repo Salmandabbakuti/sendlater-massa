@@ -24,8 +24,8 @@ import {
   Mas,
   Args,
 } from '@massalabs/massa-web3';
-import { getWallets } from '@massalabs/wallet-provider';
 import { useEffect, useState } from 'react';
+import { useWallet } from './hooks/useWallet';
 import { MassaLogo } from '@massalabs/react-ui-kit';
 import './App.css';
 
@@ -37,6 +37,7 @@ const massaClient = JsonRpcProvider.buildnet();
 const contract = new SmartContract(massaClient, CONTRACT_ADDRESS);
 
 export default function App() {
+  const { connectedWallet, account } = useWallet();
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
   const [transfers, setTransfers] = useState([]);
@@ -110,13 +111,12 @@ export default function App() {
   const scheduleTransfer = async (values) => {
     setLoading(true);
     try {
-      const wallets = await getWallets();
-      if (!wallets || wallets.length === 0) {
+      if (!connectedWallet || !account) {
         message.error('No wallet connected. Please connect a wallet first.');
         return;
       }
 
-      const accounts = await wallets[0].accounts();
+      const accounts = await connectedWallet.accounts();
       if (!accounts || accounts.length === 0) {
         message.error('No accounts found in the connected wallet.');
         return;
@@ -140,7 +140,7 @@ export default function App() {
 
       message.success('Transfer scheduled successfully!');
       form.resetFields();
-      setTransferModalVisible(false);
+      setTransferModalOpen(false);
       setTimeout(fetchContractData, 2000);
     } catch (error) {
       console.error('Error scheduling transfer:', error);
@@ -159,10 +159,6 @@ export default function App() {
   const handleViewTransfer = (transfer) => {
     setSelectedTransfer(transfer);
     setModalVisible(true);
-  };
-
-  const handleNewTransfer = () => {
-    setTransferModalVisible(true);
   };
 
   const columns = [
