@@ -17,6 +17,58 @@
   color: #333;
 }
 
+.content {
+  padding: 10px;
+  max-width: 1300px;
+  margin: 0 auto;
+  overflow-x: auto;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .content {
+    padding: 5px;
+    max-width: 100%;
+  }
+
+  .App-header h2 {
+    font-size: 1.5rem;
+  }
+
+  /* Make cards more mobile friendly */
+  .ant-card {
+    margin-bottom: 16px;
+  }
+
+  .ant-card-head-title {
+    font-size: 14px;
+  }
+
+  /* Table mobile optimizations */
+  .ant-table-tbody>tr>td {
+    padding: 8px 4px;
+  }
+
+  .ant-table-thead>tr>th {
+    padding: 8px 4px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .content {
+    padding: 2px;
+  }
+
+  .ant-statistic-title {
+    font-size: 12px;
+  }
+
+  .ant-statistic-content {
+    font-size: 16px;
+  }
+}
+
 
 .logo:hover {
   filter: drop-shadow(0 0 2em #646cffaa);

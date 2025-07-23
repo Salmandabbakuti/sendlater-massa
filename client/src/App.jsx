@@ -11,6 +11,8 @@ import {
   Modal,
   Descriptions,
   Tag,
+  DatePicker,
+  Alert,
 } from 'antd';
 import {
   ClockCircleOutlined,
@@ -20,6 +22,7 @@ import {
   ReloadOutlined,
   EyeOutlined,
   PlusOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
 import {
   SmartContract,
@@ -30,6 +33,7 @@ import {
 import { useEffect, useState } from 'react';
 import { useWallet } from './hooks/useWallet';
 import { MassaLogo } from '@massalabs/react-ui-kit';
+import dayjs from 'dayjs';
 import './App.css';
 
 const { Title, Text } = Typography;
@@ -51,6 +55,63 @@ export default function App() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedTransfer, setSelectedTransfer] = useState(null);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [selectedDateTime, setSelectedDateTime] = useState(null);
+  const [calculatedPeriod, setCalculatedPeriod] = useState(null);
+
+  // Constants for Massa network timing
+  const MASSA_PERIOD_DURATION = 16; // seconds per period
+  const PERIOD_BUFFER = 4; // buffer periods for safety
+
+  // Calculate estimated execution time from period
+  const getEstimatedExecutionTime = (scheduledPeriod) => {
+    if (scheduledPeriod <= currentPeriod) {
+      return 'Ready to execute';
+    }
+
+    const periodsUntilExecution = scheduledPeriod - currentPeriod;
+    const secondsUntilExecution = periodsUntilExecution * MASSA_PERIOD_DURATION;
+    return dayjs().add(secondsUntilExecution, 'seconds');
+  };
+
+  // Calculate target period from selected timestamp
+  const calculatePeriodFromTimestamp = (targetTimestamp) => {
+    const now = dayjs();
+    const target = dayjs(targetTimestamp);
+    const secondsDifference = target.diff(now, 'seconds');
+
+    if (secondsDifference <= 0) {
+      return null; // Past timestamp
+    }
+
+    const periodsToAdd = Math.ceil(secondsDifference / MASSA_PERIOD_DURATION);
+    const targetPeriod = currentPeriod + periodsToAdd + PERIOD_BUFFER;
+
+    return {
+      targetPeriod,
+      periodsToAdd,
+      secondsDifference,
+      estimatedExecutionTime: dayjs().add(
+        (periodsToAdd + PERIOD_BUFFER) * MASSA_PERIOD_DURATION,
+        'seconds',
+      ),
+    };
+  };
+
+  // Handle date/time selection
+  const handleDateTimeChange = (date) => {
+    setSelectedDateTime(date);
+    if (date && currentPeriod > 0) {
+      const calculation = calculatePeriodFromTimestamp(date.valueOf());
+      setCalculatedPeriod(calculation);
+
+      if (calculation) {
+        form.setFieldsValue({ scheduledPeriod: calculation.targetPeriod });
+      }
+    } else {
+      setCalculatedPeriod(null);
+      form.setFieldsValue({ scheduledPeriod: '' });
+    }
+  };
 
   const fetchContractData = async () => {
     setDataLoading(true);
@@ -66,7 +127,7 @@ export default function App() {
       const balance = Number(balanceArgs.nextU64());
       setContractBalance(balance);
 
-      // Get current period
+      // Get current period and timestamp
       const currentSlot = await massaClient.client.getCurrentSlot();
       console.log(typeof currentSlot.period);
       setCurrentPeriod(currentSlot.period);
@@ -143,6 +204,8 @@ export default function App() {
 
       message.success('Transfer scheduled successfully!');
       form.resetFields();
+      setSelectedDateTime(null);
+      setCalculatedPeriod(null);
       setTransferModalOpen(false);
       setTimeout(fetchContractData, 2000);
     } catch (error) {
@@ -168,7 +231,7 @@ export default function App() {
     {
       title: 'ID',
       key: 'id',
-      width: 50,
+      width: '8%',
       render: ({ id }) => <Tag color="cyan">#{id}</Tag>,
     },
     {
@@ -183,23 +246,24 @@ export default function App() {
           }}
           style={{ fontFamily: 'monospace', fontSize: '12px' }}
         >
-          {`${recipient.slice(0, 6)}...${recipient.slice(-4)}`}
+          {`${recipient.slice(0, 4)}...${recipient.slice(-3)}`}
         </Text>
       ),
-      width: 120,
+      width: '15%',
     },
     {
       title: 'Amount (MAS)',
       dataIndex: 'amount',
       key: 'amount',
       render: (amount) => (amount / 1e9).toFixed(4),
-      width: 100,
+      width: '12%',
     },
     {
       title: 'Period',
       dataIndex: 'scheduledPeriod',
       key: 'scheduledPeriod',
-      width: 80,
+      width: '10%',
+      responsive: ['md'],
     },
     {
       title: 'Status',
@@ -213,7 +277,43 @@ export default function App() {
           return <Text>Pending</Text>;
         }
       },
-      width: 80,
+      width: '10%',
+    },
+    {
+      title: 'Estimated Execution',
+      key: 'estimatedExecution',
+      render: (_, record) => {
+        if (record.executed) {
+          return <Text type="secondary">-</Text>;
+        }
+
+        const estimated = getEstimatedExecutionTime(record.scheduledPeriod);
+        if (estimated === 'Ready to execute') {
+          return (
+            <Text type="warning" strong>
+              Ready
+            </Text>
+          );
+        }
+
+        const periodsUntilExecution = record.scheduledPeriod - currentPeriod;
+        const minutesUntilExecution = Math.ceil(
+          (periodsUntilExecution * MASSA_PERIOD_DURATION) / 60,
+        );
+
+        return (
+          <div style={{ fontSize: '12px' }}>
+            <div>{estimated.format('MMM D, YYYY, hh:mm:ss A')}</div>
+            <Text type="secondary" style={{ fontSize: '10px' }}>
+              {minutesUntilExecution < 60
+                ? `${minutesUntilExecution}m`
+                : `${Math.ceil(minutesUntilExecution / 60)}h`}
+            </Text>
+          </div>
+        );
+      },
+      width: '20%',
+      responsive: ['lg'],
     },
     {
       title: 'Executed At',
@@ -221,16 +321,10 @@ export default function App() {
       key: 'executedAt',
       render: (executedAt) =>
         executedAt !== null
-          ? new Date(executedAt).toLocaleString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit',
-            })
+          ? dayjs(executedAt).format('MMM D, YYYY, hh:mm A')
           : '-',
-      width: 100,
+      width: '15%',
+      responsive: ['sm'],
     },
     {
       title: 'Actions',
@@ -243,7 +337,7 @@ export default function App() {
           size="small"
         />
       ),
-      width: 80,
+      width: '10%',
     },
   ];
 
@@ -254,10 +348,7 @@ export default function App() {
         <Title level={2}>SendLater</Title>
       </header>
 
-      <div
-        className="content"
-        style={{ padding: '10px', maxWidth: 1300, margin: '0 auto' }}
-      >
+      <div className="content">
         <Space direction="vertical" style={{ width: '100%' }}>
           {/* Quick Stats */}
           <Card
@@ -316,8 +407,11 @@ export default function App() {
                 pageSize: 8,
                 size: 'small',
                 showSizeChanger: false,
+                responsive: true,
               }}
               size="small"
+              scroll={{ x: 800 }}
+              responsive
             />
           </Card>
         </Space>
@@ -327,7 +421,12 @@ export default function App() {
       <Modal
         title="Schedule New Transfer"
         open={transferModalOpen}
-        onCancel={() => setTransferModalOpen(false)}
+        onCancel={() => {
+          setTransferModalOpen(false);
+          form.resetFields();
+          setSelectedDateTime(null);
+          setCalculatedPeriod(null);
+        }}
         footer={null}
         width={500}
       >
@@ -368,13 +467,89 @@ export default function App() {
           </Form.Item>
 
           <Form.Item
+            label="Execution Time"
+            help="Select when you want the transfer to be executed"
+          >
+            <DatePicker
+              showTime
+              placeholder="Select date and time"
+              style={{ width: '100%' }}
+              onChange={handleDateTimeChange}
+              disabledDate={(current) =>
+                current && current.isBefore(dayjs(), 'day')
+              }
+              disabledTime={() => ({
+                disabledHours: () => {
+                  const now = dayjs();
+                  const selected = selectedDateTime;
+                  if (selected && selected.isSame(now, 'day')) {
+                    return Array.from({ length: now.hour() }, (_, i) => i);
+                  }
+                  return [];
+                },
+                disabledMinutes: (selectedHour) => {
+                  const now = dayjs();
+                  const selected = selectedDateTime;
+                  if (
+                    selected &&
+                    selected.isSame(now, 'day') &&
+                    selectedHour === now.hour()
+                  ) {
+                    return Array.from(
+                      { length: now.minute() + 1 },
+                      (_, i) => i,
+                    );
+                  }
+                  return [];
+                },
+              })}
+            />
+          </Form.Item>
+
+          {calculatedPeriod && (
+            <Alert
+              type="info"
+              style={{ marginBottom: 16 }}
+              message="Period Calculation"
+              description={
+                <div>
+                  <p>
+                    <strong>Target Period:</strong>{' '}
+                    {calculatedPeriod.targetPeriod} (±{PERIOD_BUFFER} buffer)
+                  </p>
+                  <p>
+                    <strong>Periods to add:</strong>{' '}
+                    {calculatedPeriod.periodsToAdd + PERIOD_BUFFER}
+                  </p>
+                  <p>
+                    <strong>Estimated execution:</strong>{' '}
+                    {calculatedPeriod.estimatedExecutionTime.format(
+                      'MMM D, YYYY [at] h:mm:ss A',
+                    )}
+                  </p>
+                  <p style={{ fontSize: '12px', color: '#666' }}>
+                    <em>
+                      Note: Execution time may vary by ±
+                      {PERIOD_BUFFER * MASSA_PERIOD_DURATION}s due to network
+                      timing
+                    </em>
+                  </p>
+                </div>
+              }
+            />
+          )}
+
+          <Form.Item
             name="scheduledPeriod"
-            label="Scheduled Period"
+            label="Scheduled Period (Advanced)"
             hasFeedback
             validateFirst
-            help={`Current period is ${currentPeriod}. Choose a future period.`}
+            help={`Current period: ${currentPeriod}. Each period = ${MASSA_PERIOD_DURATION}s. You can manually override the calculated period.`}
             rules={[
-              { required: true, message: 'Enter period' },
+              {
+                required: true,
+                message: 'Select a time or enter period manually',
+              },
               // {
               //   type: 'number',
               //   min: currentPeriod + 1,
@@ -382,7 +557,11 @@ export default function App() {
               // },
             ]}
           >
-            <Input type="number" placeholder={`Period (>${currentPeriod})`} />
+            <Input
+              type="number"
+              placeholder={`Period (>${currentPeriod})`}
+              suffix={<CalendarOutlined />}
+            />
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
@@ -460,6 +639,40 @@ export default function App() {
                 children: selectedTransfer.scheduledPeriod,
               },
               {
+                key: 'estimated-execution',
+                label: 'Estimated Execution Time',
+                children: selectedTransfer.executed
+                  ? 'Already executed'
+                  : (() => {
+                      const estimated = getEstimatedExecutionTime(
+                        selectedTransfer.scheduledPeriod,
+                      );
+                      if (estimated === 'Ready to execute') {
+                        return <Text type="warning">Ready to execute now</Text>;
+                      }
+                      return (
+                        <div>
+                          <Text>
+                            {estimated.format(
+                              'ddd, MMM D, YYYY [at] h:mm:ss A',
+                            )}
+                          </Text>
+                          <br />
+                          <Text type="secondary" style={{ fontSize: '12px' }}>
+                            (
+                            {Math.ceil(
+                              ((selectedTransfer.scheduledPeriod -
+                                currentPeriod) *
+                                MASSA_PERIOD_DURATION) /
+                                60,
+                            )}{' '}
+                            minutes from now)
+                          </Text>
+                        </div>
+                      );
+                    })(),
+              },
+              {
                 key: 'status',
                 label: 'Status',
                 children: selectedTransfer.executed ? (
@@ -473,16 +686,8 @@ export default function App() {
               {
                 key: 'created-at',
                 label: 'Created At',
-                children: new Date(selectedTransfer.createdAt).toLocaleString(
-                  'en-US',
-                  {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                  },
+                children: dayjs(selectedTransfer.createdAt).format(
+                  'ddd, MMM D, YYYY h:mm A',
                 ),
               },
               {
@@ -490,16 +695,8 @@ export default function App() {
                 label: 'Executed At',
                 children:
                   selectedTransfer.executedAt !== null
-                    ? new Date(selectedTransfer.executedAt).toLocaleString(
-                        'en-US',
-                        {
-                          month: 'long',
-                          day: 'numeric',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit',
-                        },
+                    ? dayjs(selectedTransfer.executedAt).format(
+                        'ddd, MMM D, YYYY [at] h:mm:ss A',
                       )
                     : 'Not executed yet',
               },
