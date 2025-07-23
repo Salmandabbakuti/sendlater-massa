@@ -32,13 +32,14 @@ import {
 } from '@massalabs/massa-web3';
 import { useEffect, useState } from 'react';
 import { useWallet } from './hooks/useWallet';
-import { MassaLogo } from '@massalabs/react-ui-kit';
+import { MassaLogo, parseAmount } from '@massalabs/react-ui-kit';
 import dayjs from 'dayjs';
 import './App.css';
 
 const { Title, Text } = Typography;
 
-const CONTRACT_ADDRESS = 'AS1tczYTPcs8cNiqnKHM5TGANzPZA5HnFQA7iDyEttZ85wD7su99';
+const CONTRACT_ADDRESS =
+  'AS12q1Nf5umfL7H5Cp5MTwey9DvcrUwG6dycqt9eRi5FmsxBmmYdt';
 
 const massaClient = JsonRpcProvider.buildnet();
 const contract = new SmartContract(massaClient, CONTRACT_ADDRESS);
@@ -60,7 +61,7 @@ export default function App() {
 
   // Constants for Massa network timing
   const MASSA_PERIOD_DURATION = 16; // seconds per period
-  const PERIOD_BUFFER = 4; // buffer periods for safety
+  const PERIOD_BUFFER = 2; // buffer periods for safety
 
   // Calculate estimated execution time from period
   const getEstimatedExecutionTime = (scheduledPeriod) => {
@@ -187,7 +188,7 @@ export default function App() {
       }
 
       const provider = accounts[0];
-      const amountInMas = parseFloat(values.amount);
+      const amountInMas = parseAmount(values.amount, 9);
       const scheduledPeriod = parseInt(values.scheduledPeriod);
 
       const args = new Args()
@@ -199,7 +200,7 @@ export default function App() {
         func: 'scheduleTransfer',
         target: CONTRACT_ADDRESS,
         parameter: args,
-        coins: Mas.fromString(amountInMas.toString()),
+        coins: amountInMas,
       });
 
       message.success('Transfer scheduled successfully!');
@@ -232,6 +233,7 @@ export default function App() {
       title: 'ID',
       key: 'id',
       width: '8%',
+      sorter: (a, b) => a.id - b.id,
       render: ({ id }) => <Tag color="cyan">#{id}</Tag>,
     },
     {
@@ -255,6 +257,7 @@ export default function App() {
       title: 'Amount (MAS)',
       dataIndex: 'amount',
       key: 'amount',
+      sorter: (a, b) => a.amount - b.amount,
       render: (amount) => (amount / 1e9).toFixed(4),
       width: '12%',
     },
@@ -264,6 +267,7 @@ export default function App() {
       key: 'scheduledPeriod',
       width: '10%',
       responsive: ['md'],
+      sorter: (a, b) => a.scheduledPeriod - b.scheduledPeriod,
     },
     {
       title: 'Status',
@@ -319,6 +323,7 @@ export default function App() {
       title: 'Executed At',
       dataIndex: 'executedAt',
       key: 'executedAt',
+      sorter: (a, b) => dayjs(a.executedAt).unix() - dayjs(b.executedAt).unix(),
       render: (executedAt) =>
         executedAt !== null
           ? dayjs(executedAt).format('MMM D, YYYY, hh:mm A')
@@ -379,6 +384,7 @@ export default function App() {
                 prefix={<ClockCircleOutlined />}
                 title="Current Period"
                 value={currentPeriod}
+                formatter={(val) => val}
                 valueStyle={{ color: '#faad14', fontWeight: 'bold' }}
               />
             </Space>

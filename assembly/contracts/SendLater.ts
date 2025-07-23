@@ -73,7 +73,7 @@ export function scheduleTransfer(binaryArgs: StaticArray<u8>): void {
 
   // Schedule the execution
   const startSlot = new Slot(scheduledPeriod, 0);
-  const endSlot = new Slot(scheduledPeriod + 1, 0);
+  const endSlot = new Slot(scheduledPeriod + 2, 0);
 
   asyncCall(
     Context.callee(),

@@ -11,7 +11,7 @@ const account = await Account.fromEnv();
 const provider = JsonRpcProvider.buildnet(account);
 
 // Try to read contract address from config file
-let CONTRACT_ADDRESS = 'AS1tczYTPcs8cNiqnKHM5TGANzPZA5HnFQA7iDyEttZ85wD7su99'; // Fallback address
+let CONTRACT_ADDRESS = 'AS12q1Nf5umfL7H5Cp5MTwey9DvcrUwG6dycqt9eRi5FmsxBmmYdt'; // Fallback address
 
 const contract = new SmartContract(provider, CONTRACT_ADDRESS);
 
