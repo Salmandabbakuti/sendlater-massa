@@ -8,11 +8,14 @@ import {
   Space,
   Typography,
   Statistic,
+  Modal,
+  Descriptions,
 } from 'antd';
 import {
   ClockCircleOutlined,
   SendOutlined,
   ReloadOutlined,
+  EyeOutlined,
 } from '@ant-design/icons';
 import {
   SmartContract,
@@ -27,7 +30,7 @@ import './App.css';
 
 const { Title, Text } = Typography;
 
-const CONTRACT_ADDRESS = 'AS1BTbwmhocHYstPF8rSe3XHxFRkL2N31XSHJFjuVTY8bX3g2vRB';
+const CONTRACT_ADDRESS = 'AS1nhrVT666KzByEtm3MgSjbgfEL8diLQDwn84WuqSHwjGtCzaju';
 
 const massaClient = JsonRpcProvider.buildnet();
 const contract = new SmartContract(massaClient, CONTRACT_ADDRESS);
@@ -39,6 +42,8 @@ export default function App() {
   const [contractBalance, setContractBalance] = useState(0);
   const [currentPeriod, setCurrentPeriod] = useState(0);
   const [form] = Form.useForm();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedTransfer, setSelectedTransfer] = useState(null);
 
   const fetchContractData = async () => {
     try {
@@ -55,6 +60,7 @@ export default function App() {
 
       // Get current period
       const currentSlot = await massaClient.client.getCurrentSlot();
+      console.log(typeof currentSlot.period);
       setCurrentPeriod(currentSlot.period);
 
       // Fetch transfers
@@ -70,8 +76,8 @@ export default function App() {
 
           if (transferDetails) {
             const parts = transferDetails.split('|');
-            console.log('Transfer parts:', parts);
-            if (parts.length >= 5) {
+            if (parts.length >= 7) {
+              // Updated to expect 7 parts with timestamps
               transfersData.push({
                 id: i,
                 recipient: parts[0],
@@ -79,6 +85,8 @@ export default function App() {
                 scheduledPeriod: parseInt(parts[2]),
                 sender: parts[3],
                 executed: parts[4] === 'true',
+                createdAt: parseInt(parts[5]),
+                executedAt: parts[6] !== '0' ? parseInt(parts[6]) : null,
               });
             }
           }
@@ -141,19 +149,17 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleViewTransfer = (transfer) => {
+    setSelectedTransfer(transfer);
+    setModalVisible(true);
+  };
+
   const columns = [
     {
       title: 'ID',
       dataIndex: 'id',
       key: 'id',
       width: 50,
-    },
-    {
-      title: 'Recipient',
-      dataIndex: 'recipient',
-      key: 'recipient',
-      ellipsis: true,
-      width: 180,
     },
     {
       title: 'Amount (MAS)',
@@ -166,7 +172,7 @@ export default function App() {
       title: 'Period',
       dataIndex: 'scheduledPeriod',
       key: 'scheduledPeriod',
-      width: 80,
+      width: 100,
     },
     {
       title: 'Status',
@@ -183,11 +189,17 @@ export default function App() {
       width: 100,
     },
     {
-      title: 'Sender',
-      dataIndex: 'sender',
-      key: 'sender',
-      ellipsis: true,
-      width: 180,
+      title: 'Actions',
+      key: 'actions',
+      render: (_, record) => (
+        <Button
+          type="text"
+          icon={<EyeOutlined />}
+          onClick={() => handleViewTransfer(record)}
+          size="small"
+        />
+      ),
+      width: 80,
     },
   ];
 
@@ -235,27 +247,28 @@ export default function App() {
             >
               <Form.Item
                 name="recipient"
+                hasFeedback
                 rules={[
                   { required: true, message: 'Enter recipient address' },
-                  {
-                    pattern: /^AS[A-Za-z0-9]{49}$/,
-                    message: 'Invalid Massa address',
-                  },
+                  // {
+                  //   pattern: /^A[SU][A-Za-z0-9]{49}$/,
+                  //   message: 'Invalid Massa address (must start with AS or AU)',
+                  // },
                 ]}
                 style={{ minWidth: 300 }}
               >
-                <Input placeholder="Recipient Address (AS1...)" />
+                <Input placeholder="Recipient Address (AS1... or AU1...)" />
               </Form.Item>
 
               <Form.Item
                 name="amount"
                 rules={[
                   { required: true, message: 'Enter amount' },
-                  {
-                    type: 'number',
-                    min: 0.000000001,
-                    message: 'Amount must be > 0',
-                  },
+                  // {
+                  //   type: 'number',
+                  //   min: 0.000000001,
+                  //   message: 'Amount must be > 0',
+                  // },
                 ]}
                 style={{ minWidth: 120 }}
               >
@@ -264,13 +277,15 @@ export default function App() {
 
               <Form.Item
                 name="scheduledPeriod"
+                hasFeedback
+                validateFirst
                 rules={[
                   { required: true, message: 'Enter period' },
-                  {
-                    type: 'number',
-                    min: currentPeriod + 1,
-                    message: `Must be > ${currentPeriod}`,
-                  },
+                  // {
+                  //   type: 'number',
+                  //   min: currentPeriod + 1,
+                  //   message: `Must be > ${currentPeriod}`,
+                  // },
                 ]}
                 style={{ minWidth: 120 }}
               >
@@ -309,6 +324,60 @@ export default function App() {
           </Card>
         </Space>
       </div>
+
+      {/* Transfer Details Modal */}
+      <Modal
+        title={`Transfer Details - ID ${selectedTransfer?.id}`}
+        open={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setModalVisible(false)}>
+            Close
+          </Button>,
+        ]}
+        width={600}
+      >
+        {selectedTransfer && (
+          <Descriptions bordered column={1} size="small">
+            <Descriptions.Item label="Transfer ID">
+              {selectedTransfer.id}
+            </Descriptions.Item>
+            <Descriptions.Item label="Recipient Address">
+              <Text copyable style={{ fontFamily: 'monospace' }}>
+                {selectedTransfer.recipient}
+              </Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Sender Address">
+              <Text copyable style={{ fontFamily: 'monospace' }}>
+                {selectedTransfer.sender}
+              </Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Amount">
+              {(selectedTransfer.amount / 1e9).toFixed(9)} MAS
+            </Descriptions.Item>
+            <Descriptions.Item label="Scheduled Period">
+              {selectedTransfer.scheduledPeriod}
+            </Descriptions.Item>
+            <Descriptions.Item label="Status">
+              {selectedTransfer.executed ? (
+                <Text type="success">Executed</Text>
+              ) : selectedTransfer.scheduledPeriod <= currentPeriod ? (
+                <Text type="warning">Ready to Execute</Text>
+              ) : (
+                <Text>Pending</Text>
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label="Created At">
+              {new Date(selectedTransfer.createdAt * 1000).toLocaleString()}
+            </Descriptions.Item>
+            <Descriptions.Item label="Executed At">
+              {selectedTransfer.executedAt
+                ? new Date(selectedTransfer.executedAt * 1000).toLocaleString()
+                : 'Not executed yet'}
+            </Descriptions.Item>
+          </Descriptions>
+        )}
+      </Modal>
     </div>
   );
 }

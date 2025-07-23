@@ -60,9 +60,11 @@ export function scheduleTransfer(binaryArgs: StaticArray<u8>): void {
   // Get current transfer count
   const currentCount = _getTransferCount();
   const transferId = currentCount + 1;
+  const createdAt = Context.timestamp();
 
-  // Store the scheduled transfer
-  const transferData = `${recipient}|${amount}|${scheduledPeriod}|${sender}|false`;
+  // Store the scheduled transfer with timestamps
+  // Format: recipient|amount|scheduledPeriod|sender|executed|createdAt|executedAt
+  const transferData = `${recipient}|${amount}|${scheduledPeriod}|${sender}|false|${createdAt}|0`;
   const transferKey = stringToBytes(`transfer_${transferId}`);
   Storage.set(transferKey, stringToBytes(transferData));
 
@@ -84,7 +86,8 @@ export function scheduleTransfer(binaryArgs: StaticArray<u8>): void {
   );
 
   generateEvent(
-    `Transfer scheduled: ID ${transferId}, Amount: ${amount}, Recipient: ${recipient}, Period: ${scheduledPeriod}`,
+    `Transfer scheduled: ID ${transferId}, Amount: ${amount}, ` +
+      `Recipient: ${recipient}, Period: ${scheduledPeriod}, Created: ${createdAt}`,
   );
 }
 
@@ -118,12 +121,14 @@ export function executeTransfer(binaryArgs: StaticArray<u8>): void {
   const recipientAddress = new Address(recipient);
   transferCoins(recipientAddress, amount);
 
-  // Mark as executed
-  const updatedData = `${parts[0]}|${parts[1]}|${parts[2]}|${parts[3]}|true`;
+  // Mark as executed with execution timestamp
+  const executedAt = Context.timestamp();
+  const updatedData = `${parts[0]}|${parts[1]}|${parts[2]}|${parts[3]}|true|${parts[5]}|${executedAt}`;
   Storage.set(transferKey, stringToBytes(updatedData));
 
   generateEvent(
-    `Transfer executed: ID ${transferId}, Amount: ${amount} sent to ${recipient}`,
+    `Transfer executed: ID ${transferId}, Amount: ${amount} ` +
+      `sent to ${recipient}, Executed: ${executedAt}`,
   );
 }
 
