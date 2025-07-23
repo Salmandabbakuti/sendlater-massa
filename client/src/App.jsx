@@ -8,7 +8,6 @@ import {
   Space,
   Typography,
   Statistic,
-  Divider,
 } from 'antd';
 import {
   ClockCircleOutlined,
@@ -20,7 +19,6 @@ import {
   JsonRpcProvider,
   Mas,
   Args,
-  bytesToStr,
 } from '@massalabs/massa-web3';
 import { getWallets } from '@massalabs/wallet-provider';
 import { useEffect, useState } from 'react';
@@ -29,8 +27,7 @@ import './App.css';
 
 const { Title, Text } = Typography;
 
-// Try to load contract address from config file, fallback to placeholder
-const CONTRACT_ADDRESS = 'AS1BTbwmhocHYstPF8rSe3XHxFRkL2N31XSHJFjuVTY8bX3g2vRB'; // Default placeholder
+const CONTRACT_ADDRESS = 'AS1BTbwmhocHYstPF8rSe3XHxFRkL2N31XSHJFjuVTY8bX3g2vRB';
 
 const massaClient = JsonRpcProvider.buildnet();
 const contract = new SmartContract(massaClient, CONTRACT_ADDRESS);
@@ -47,25 +44,20 @@ export default function App() {
     try {
       // Get transfer count
       const countResult = await contract.read('getTransferCount');
-      console.log('Transfer count result:', countResult);
       const count = parseInt(countResult.value);
       setTransferCount(count);
 
       // Get contract balance
       const balanceResult = await contract.read('getContractBalance');
-      console.log('Contract balance result:', balanceResult);
       const balanceArgs = new Args(balanceResult.value);
       const balance = Number(balanceArgs.nextU64());
-      console.log('Contract balance:', balance);
-
       setContractBalance(balance);
 
-      // Get current period from provider
+      // Get current period
       const currentSlot = await massaClient.client.getCurrentSlot();
-      console.log('Current slot:', currentSlot);
-      setCurrentPeriod(currentSlot.period); // Approximate period
+      setCurrentPeriod(currentSlot.period);
 
-      // Fetch all transfers
+      // Fetch transfers
       const transfersData = [];
       for (let i = 1; i <= count; i++) {
         try {
@@ -76,8 +68,9 @@ export default function App() {
           const transferArgs = new Args(transferResult.value);
           const transferDetails = transferArgs.nextString();
 
-          if (transferDetails && transferDetails !== 'Transfer not found') {
+          if (transferDetails) {
             const parts = transferDetails.split('|');
+            console.log('Transfer parts:', parts);
             if (parts.length >= 5) {
               transfersData.push({
                 id: i,
@@ -133,8 +126,6 @@ export default function App() {
 
       message.success('Transfer scheduled successfully!');
       form.resetFields();
-
-      // Refresh data after a short delay
       setTimeout(fetchContractData, 2000);
     } catch (error) {
       console.error('Error scheduling transfer:', error);
@@ -146,7 +137,6 @@ export default function App() {
 
   useEffect(() => {
     fetchContractData();
-    // Refresh data every 30 seconds
     const interval = setInterval(fetchContractData, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -156,24 +146,27 @@ export default function App() {
       title: 'ID',
       dataIndex: 'id',
       key: 'id',
-      width: 60,
+      width: 50,
     },
     {
       title: 'Recipient',
       dataIndex: 'recipient',
       key: 'recipient',
       ellipsis: true,
+      width: 180,
     },
     {
       title: 'Amount (MAS)',
       dataIndex: 'amount',
       key: 'amount',
       render: (amount) => (amount / 1e9).toFixed(4),
+      width: 120,
     },
     {
-      title: 'Scheduled Period',
+      title: 'Period',
       dataIndex: 'scheduledPeriod',
       key: 'scheduledPeriod',
+      width: 80,
     },
     {
       title: 'Status',
@@ -182,17 +175,19 @@ export default function App() {
         if (record.executed) {
           return <Text type="success">Executed</Text>;
         } else if (record.scheduledPeriod <= currentPeriod) {
-          return <Text type="warning">Ready to Execute</Text>;
+          return <Text type="warning">Ready</Text>;
         } else {
           return <Text>Pending</Text>;
         }
       },
+      width: 100,
     },
     {
       title: 'Sender',
       dataIndex: 'sender',
       key: 'sender',
       ellipsis: true,
+      width: 180,
     },
   ];
 
@@ -200,94 +195,89 @@ export default function App() {
     <div className="App">
       <header className="App-header">
         <MassaLogo />
-        <Title level={2} style={{ color: 'white', margin: '20px 0' }}>
-          Scheduled Transfer Contract
+        <Title level={2} style={{ margin: '16px 0 8px' }}>
+          Scheduled Transfers
         </Title>
-        <Text style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-          Schedule transfers to be executed at future periods
-        </Text>
       </header>
 
-      <div className="content">
+      <div
+        className="content"
+        style={{ padding: '20px', maxWidth: 1000, margin: '0 auto' }}
+      >
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
-          {/* Contract Info */}
-          <Card title="Contract Information">
-            <Space direction="horizontal" size="large" wrap>
+          {/* Quick Stats */}
+          <Card size="small">
+            <Space size="large" wrap>
+              <Statistic title="Total Transfers" value={transferCount} />
               <Statistic
-                title="Total Transfers"
-                value={transferCount}
-                prefix={<ClockCircleOutlined />}
-              />
-              <Statistic
-                title="Contract Balance"
+                title="Balance"
                 value={(contractBalance / 1e9).toFixed(4)}
                 suffix="MAS"
               />
               <Statistic title="Current Period" value={currentPeriod} />
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={fetchContractData}
+                size="small"
+              >
+                Refresh
+              </Button>
             </Space>
-            <Divider />
-            <Text type="secondary">Contract Address: {CONTRACT_ADDRESS}</Text>
-            <br />
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={fetchContractData}
-              style={{ marginTop: 10 }}
-            >
-              Refresh Data
-            </Button>
           </Card>
 
-          {/* Schedule Transfer Form */}
-          <Card title="Schedule New Transfer" extra={<SendOutlined />}>
+          {/* Schedule Form */}
+          <Card title="Schedule New Transfer" size="small">
             <Form
               form={form}
-              layout="vertical"
               onFinish={scheduleTransfer}
-              style={{ maxWidth: 600 }}
+              layout="inline"
+              style={{ flexWrap: 'wrap', gap: '8px' }}
             >
               <Form.Item
-                label="Recipient Address"
                 name="recipient"
                 rules={[
-                  { required: true, message: 'Please enter recipient address' },
+                  { required: true, message: 'Enter recipient address' },
                   {
                     pattern: /^AS[A-Za-z0-9]{49}$/,
-                    message: 'Please enter a valid Massa address',
+                    message: 'Invalid Massa address',
                   },
                 ]}
+                style={{ minWidth: 300 }}
               >
-                <Input placeholder="AS1..." />
+                <Input placeholder="Recipient Address (AS1...)" />
               </Form.Item>
 
               <Form.Item
-                label="Amount (MAS)"
                 name="amount"
                 rules={[
-                  { required: true, message: 'Please enter amount' },
+                  { required: true, message: 'Enter amount' },
                   {
                     type: 'number',
                     min: 0.000000001,
-                    message: 'Amount must be greater than 0',
+                    message: 'Amount must be > 0',
                   },
                 ]}
+                style={{ minWidth: 120 }}
               >
-                <Input type="number" step="0.000000001" placeholder="1.0" />
+                <Input type="number" step="0.001" placeholder="Amount (MAS)" />
               </Form.Item>
 
               <Form.Item
-                label="Scheduled Period"
                 name="scheduledPeriod"
                 rules={[
-                  { required: true, message: 'Please enter scheduled period' },
+                  { required: true, message: 'Enter period' },
                   {
                     type: 'number',
                     min: currentPeriod + 1,
-                    message: `Period must be greater than current period (${currentPeriod})`,
+                    message: `Must be > ${currentPeriod}`,
                   },
                 ]}
-                help={`Current period is ${currentPeriod}. Choose a future period.`}
+                style={{ minWidth: 120 }}
               >
-                <Input type="number" placeholder={currentPeriod + 100} />
+                <Input
+                  type="number"
+                  placeholder={`Period (>${currentPeriod})`}
+                />
               </Form.Item>
 
               <Form.Item>
@@ -295,22 +285,26 @@ export default function App() {
                   type="primary"
                   htmlType="submit"
                   loading={loading}
-                  icon={<ClockCircleOutlined />}
+                  icon={<SendOutlined />}
                 >
-                  Schedule Transfer
+                  Schedule
                 </Button>
               </Form.Item>
             </Form>
           </Card>
 
           {/* Transfers Table */}
-          <Card title="Scheduled Transfers">
+          <Card title={`Transfers (${transfers.length})`} size="small">
             <Table
               columns={columns}
               dataSource={transfers}
               rowKey="id"
-              pagination={{ pageSize: 10 }}
-              scroll={{ x: true }}
+              pagination={{
+                pageSize: 8,
+                size: 'small',
+                showSizeChanger: false,
+              }}
+              size="small"
             />
           </Card>
         </Space>

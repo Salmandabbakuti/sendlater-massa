@@ -19,18 +19,17 @@ const contract = new SmartContract(provider, CONTRACT_ADDRESS);
 console.log('🚀 Starting Scheduled Transfer Demo...');
 
 // Get current node status to determine current period
-const nodeStatus = await provider.getNodeStatus();
-const currentPeriod = BigInt(nodeStatus.currentCycle) * 128n; // Approximate period calculation
-console.log('Current period:', currentPeriod.toString());
+const currentSlot = await provider.client.getCurrentSlot();
+console.log('Current period:', typeof currentSlot.period);
 
 // Schedule a transfer for 100 periods in the future
-const futureperiod = currentPeriod + 100n;
+const futureperiod = BigInt(currentSlot.period) + 5n;
 const recipientAddress = 'AU15bZP26cUAc2jtXStAqnobi8xQHGwnPkGzsXBcnG5tAKEANYas'; // Example address
-const transferAmount = Mas.fromString('0.05'); // 0.05 MAS
+const transferAmount = Mas.fromString('2'); // 2 MAS
 
 console.log('\n📅 Scheduling a transfer...');
 console.log('Recipient:', recipientAddress);
-console.log('Amount:', '0.05 MAS');
+console.log('Amount:', '2 MAS');
 console.log('Scheduled for period:', futureperiod.toString());
 
 try {
@@ -38,10 +37,13 @@ try {
     .addString(recipientAddress)
     .addU64(futureperiod)
     .serialize();
-
-  await contract.call('scheduleTransfer', scheduleArgs, {
+  const operation = await contract.call('scheduleTransfer', scheduleArgs, {
     coins: transferAmount,
   });
+
+  console.log('⌛ Waiting for operation to complete...');
+
+  await operation.waitSpeculativeExecution();
 
   console.log('✅ Transfer scheduled successfully!');
 
@@ -62,7 +64,7 @@ try {
   console.log('Contract balance:', (Number(balance) / 1e9).toFixed(9), 'MAS');
 
   // Get details of last transfer
-  const transferArgs = new Args().addU64(transferCount + 1n).serialize(); // Get last transfer (ID = transferCount)
+  const transferArgs = new Args().addU64(transferCount).serialize(); // Get last transfer (ID = transferCount)
   const transferResult = await contract.read('getTransfer', transferArgs);
   // The transfer details are returned as a string, so we can use bytesToStr
   const transferDetails = new Args(transferResult.value).nextString();
