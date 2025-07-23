@@ -7,9 +7,7 @@ import './index.css';
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <SiteLayout>
-      {({ account, connectedWallet }) => (
-        <App account={account} connectedWallet={connectedWallet} />
-      )}
+      <App />
     </SiteLayout>
   </StrictMode>,
 );
