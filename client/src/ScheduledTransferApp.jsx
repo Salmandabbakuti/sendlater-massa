@@ -20,7 +20,6 @@ import {
   JsonRpcProvider,
   Mas,
   Args,
-  bytesToStr,
 } from '@massalabs/massa-web3';
 import { getWallets } from '@massalabs/wallet-provider';
 import { useEffect, useState } from 'react';
@@ -30,12 +29,18 @@ import './App.css';
 const { Title, Text } = Typography;
 
 // Try to load contract address from config file, fallback to placeholder
-const CONTRACT_ADDRESS = 'AS1BTbwmhocHYstPF8rSe3XHxFRkL2N31XSHJFjuVTY8bX3g2vRB'; // Default placeholder
+let CONTRACT_ADDRESS = 'AS1...'; // Default placeholder
+try {
+  const contractConfig = await import('./contract-config.json');
+  CONTRACT_ADDRESS = contractConfig.address;
+} catch {
+  console.log('Contract config not found, using placeholder address');
+}
 
 const massaClient = JsonRpcProvider.buildnet();
 const contract = new SmartContract(massaClient, CONTRACT_ADDRESS);
 
-export default function App() {
+export default function ScheduledTransferApp() {
   const [loading, setLoading] = useState(false);
   const [transfers, setTransfers] = useState([]);
   const [transferCount, setTransferCount] = useState(0);
@@ -48,16 +53,12 @@ export default function App() {
       // Get transfer count
       const countResult = await contract.read('getTransferCount');
       console.log('Transfer count result:', countResult);
-      const count = parseInt(countResult.value);
+      const count = parseInt(countResult.value) || 0;
       setTransferCount(count);
 
       // Get contract balance
       const balanceResult = await contract.read('getContractBalance');
-      console.log('Contract balance result:', balanceResult);
-      const balanceArgs = new Args(balanceResult.value);
-      const balance = Number(balanceArgs.nextU64());
-      console.log('Contract balance:', balance);
-
+      const balance = parseInt(balanceResult.value) || 0;
       setContractBalance(balance);
 
       // Get current period from provider
@@ -71,13 +72,13 @@ export default function App() {
         try {
           const transferResult = await contract.read(
             'getTransfer',
-            new Args().addU64(BigInt(i)),
+            new Args().addU64(i),
           );
-          const transferArgs = new Args(transferResult.value);
-          const transferDetails = transferArgs.nextString();
-
-          if (transferDetails && transferDetails !== 'Transfer not found') {
-            const parts = transferDetails.split('|');
+          if (
+            transferResult.value &&
+            transferResult.value !== 'Transfer not found'
+          ) {
+            const parts = transferResult.value.split('|');
             if (parts.length >= 5) {
               transfersData.push({
                 id: i,
@@ -121,13 +122,12 @@ export default function App() {
 
       const args = new Args()
         .addString(values.recipient)
-        .addU64(BigInt(scheduledPeriod))
-        .serialize();
+        .addU64(scheduledPeriod);
 
       await provider.callSC({
         func: 'scheduleTransfer',
         target: CONTRACT_ADDRESS,
-        parameter: args,
+        parameter: args.serialize(),
         coins: Mas.fromString(amountInMas.toString()),
       });
 

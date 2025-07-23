@@ -50,6 +50,60 @@ The test framework documentation is available here: [as-pect docs](https://as-pe
 npm run test
 ```
 
+## Scheduled Transfer Contract
+
+This project includes a scheduled transfer smart contract that allows users to schedule transfers of MAS tokens to be executed at future periods.
+
+### Features
+
+- Schedule transfers to be executed at specific future periods
+- Automatic execution via async calls
+- Track transfer status and history
+- Built-in validation for scheduling constraints
+
+### Deploy the Scheduled Transfer Contract
+
+```shell
+npm run deploy:scheduled-transfer
+```
+
+This will:
+1. Build the contract
+2. Deploy it to the Massa network
+3. Save the contract address to `client/src/contract-config.json` for the frontend
+
+### Demo the Contract
+
+Run a demo that schedules a test transfer:
+
+```shell
+npm run demo:scheduled-transfer
+```
+
+### Frontend Usage
+
+The React frontend provides a complete interface to:
+- Schedule new transfers
+- View all scheduled transfers
+- Monitor transfer status
+- Check contract balance
+
+Start the frontend:
+
+```shell
+cd client
+npm install
+npm run dev
+```
+
+### Contract API
+
+- `scheduleTransfer(recipient: string, scheduledPeriod: u64)`: Schedule a transfer
+- `executeTransfer(transferId: StaticArray<u8>)`: Execute a scheduled transfer (called automatically)
+- `getTransferCount()`: Get total number of transfers
+- `getTransfer(transferId: u64)`: Get transfer details
+- `getContractBalance()`: Get contract balance
+
 ## Format code
 
 ```shell
