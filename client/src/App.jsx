@@ -16,6 +16,7 @@ import {
   SendOutlined,
   ReloadOutlined,
   EyeOutlined,
+  PlusOutlined,
 } from '@ant-design/icons';
 import {
   SmartContract,
@@ -37,6 +38,7 @@ const contract = new SmartContract(massaClient, CONTRACT_ADDRESS);
 
 export default function App() {
   const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(false);
   const [transfers, setTransfers] = useState([]);
   const [transferCount, setTransferCount] = useState(0);
   const [contractBalance, setContractBalance] = useState(0);
@@ -44,8 +46,10 @@ export default function App() {
   const [form] = Form.useForm();
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedTransfer, setSelectedTransfer] = useState(null);
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
 
   const fetchContractData = async () => {
+    setDataLoading(true);
     try {
       // Get transfer count
       const countResult = await contract.read('getTransferCount');
@@ -63,9 +67,9 @@ export default function App() {
       console.log(typeof currentSlot.period);
       setCurrentPeriod(currentSlot.period);
 
-      // Fetch transfers
+      // Fetch transfers in desc order (newest first)
       const transfersData = [];
-      for (let i = 1; i <= count; i++) {
+      for (let i = count; i >= 1; i--) {
         try {
           const transferResult = await contract.read(
             'getTransfer',
@@ -98,6 +102,8 @@ export default function App() {
     } catch (error) {
       console.error('Error fetching contract data:', error);
       message.error('Failed to fetch contract data');
+    } finally {
+      setDataLoading(false);
     }
   };
 
@@ -134,6 +140,7 @@ export default function App() {
 
       message.success('Transfer scheduled successfully!');
       form.resetFields();
+      setTransferModalVisible(false);
       setTimeout(fetchContractData, 2000);
     } catch (error) {
       console.error('Error scheduling transfer:', error);
@@ -152,6 +159,10 @@ export default function App() {
   const handleViewTransfer = (transfer) => {
     setSelectedTransfer(transfer);
     setModalVisible(true);
+  };
+
+  const handleNewTransfer = () => {
+    setTransferModalVisible(true);
   };
 
   const columns = [
@@ -216,9 +227,18 @@ export default function App() {
         className="content"
         style={{ padding: '20px', maxWidth: 1000, margin: '0 auto' }}
       >
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <Space direction="vertical" style={{ width: '100%' }}>
           {/* Quick Stats */}
-          <Card size="small">
+          <Card
+            extra={
+              <Button
+                title="Refresh"
+                shape="circle"
+                icon={<ReloadOutlined spin={dataLoading} />}
+                onClick={fetchContractData}
+              />
+            }
+          >
             <Space size="large" wrap>
               <Statistic title="Total Transfers" value={transferCount} />
               <Statistic
@@ -227,89 +247,24 @@ export default function App() {
                 suffix="MAS"
               />
               <Statistic title="Current Period" value={currentPeriod} />
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={fetchContractData}
-                size="small"
-              >
-                Refresh
-              </Button>
             </Space>
           </Card>
 
-          {/* Schedule Form */}
-          <Card title="Schedule New Transfer" size="small">
-            <Form
-              form={form}
-              onFinish={scheduleTransfer}
-              layout="inline"
-              style={{ flexWrap: 'wrap', gap: '8px' }}
-            >
-              <Form.Item
-                name="recipient"
-                hasFeedback
-                rules={[
-                  { required: true, message: 'Enter recipient address' },
-                  // {
-                  //   pattern: /^A[SU][A-Za-z0-9]{49}$/,
-                  //   message: 'Invalid Massa address (must start with AS or AU)',
-                  // },
-                ]}
-                style={{ minWidth: 300 }}
-              >
-                <Input placeholder="Recipient Address (AS1... or AU1...)" />
-              </Form.Item>
-
-              <Form.Item
-                name="amount"
-                rules={[
-                  { required: true, message: 'Enter amount' },
-                  // {
-                  //   type: 'number',
-                  //   min: 0.000000001,
-                  //   message: 'Amount must be > 0',
-                  // },
-                ]}
-                style={{ minWidth: 120 }}
-              >
-                <Input type="number" step="0.001" placeholder="Amount (MAS)" />
-              </Form.Item>
-
-              <Form.Item
-                name="scheduledPeriod"
-                hasFeedback
-                validateFirst
-                rules={[
-                  { required: true, message: 'Enter period' },
-                  // {
-                  //   type: 'number',
-                  //   min: currentPeriod + 1,
-                  //   message: `Must be > ${currentPeriod}`,
-                  // },
-                ]}
-                style={{ minWidth: 120 }}
-              >
-                <Input
-                  type="number"
-                  placeholder={`Period (>${currentPeriod})`}
-                />
-              </Form.Item>
-
-              <Form.Item>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={loading}
-                  icon={<SendOutlined />}
-                >
-                  Schedule
-                </Button>
-              </Form.Item>
-            </Form>
-          </Card>
-
           {/* Transfers Table */}
-          <Card title={`Transfers (${transfers.length})`} size="small">
+          <Card
+            title={`Transfers (${transfers.length})`}
+            extra={
+              <Button
+                title="New Transfer"
+                type="primary"
+                shape="round"
+                icon={<PlusOutlined />}
+                onClick={() => setTransferModalOpen(true)}
+              >
+                Transfer
+              </Button>
+            }
+          >
             <Table
               columns={columns}
               dataSource={transfers}
@@ -325,6 +280,86 @@ export default function App() {
         </Space>
       </div>
 
+      {/* New Transfer Modal */}
+      <Modal
+        title="Schedule New Transfer"
+        open={transferModalOpen}
+        onCancel={() => setTransferModalOpen(false)}
+        footer={null}
+        width={500}
+      >
+        <Form
+          form={form}
+          onFinish={scheduleTransfer}
+          layout="vertical"
+          style={{ marginTop: 16 }}
+        >
+          <Form.Item
+            name="recipient"
+            label="Recipient Address"
+            hasFeedback
+            rules={[
+              { required: true, message: 'Enter recipient address' },
+              // {
+              //   pattern: /^A[SU][A-Za-z0-9]{49}$/,
+              //   message: 'Invalid Massa address (must start with AS or AU)',
+              // },
+            ]}
+          >
+            <Input placeholder="Recipient Address (AS1... or AU1...)" />
+          </Form.Item>
+
+          <Form.Item
+            name="amount"
+            label="Amount (MAS)"
+            rules={[
+              { required: true, message: 'Enter amount' },
+              // {
+              //   type: 'number',
+              //   min: 0.000000001,
+              //   message: 'Amount must be > 0',
+              // },
+            ]}
+          >
+            <Input type="number" step="0.001" placeholder="Amount (MAS)" />
+          </Form.Item>
+
+          <Form.Item
+            name="scheduledPeriod"
+            label="Scheduled Period"
+            hasFeedback
+            validateFirst
+            rules={[
+              { required: true, message: 'Enter period' },
+              // {
+              //   type: 'number',
+              //   min: currentPeriod + 1,
+              //   message: `Must be > ${currentPeriod}`,
+              // },
+            ]}
+          >
+            <Input type="number" placeholder={`Period (>${currentPeriod})`} />
+          </Form.Item>
+
+          <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
+            <Space>
+              <Button shape="round" onClick={() => setTransferModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="primary"
+                shape="round"
+                htmlType="submit"
+                loading={loading}
+                icon={<SendOutlined />}
+              >
+                Schedule
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
       {/* Transfer Details Modal */}
       <Modal
         title={`Transfer Details - ID ${selectedTransfer?.id}`}
@@ -338,44 +373,74 @@ export default function App() {
         width={600}
       >
         {selectedTransfer && (
-          <Descriptions bordered column={1} size="small">
-            <Descriptions.Item label="Transfer ID">
-              {selectedTransfer.id}
-            </Descriptions.Item>
-            <Descriptions.Item label="Recipient Address">
-              <Text copyable style={{ fontFamily: 'monospace' }}>
-                {selectedTransfer.recipient}
-              </Text>
-            </Descriptions.Item>
-            <Descriptions.Item label="Sender Address">
-              <Text copyable style={{ fontFamily: 'monospace' }}>
-                {selectedTransfer.sender}
-              </Text>
-            </Descriptions.Item>
-            <Descriptions.Item label="Amount">
-              {(selectedTransfer.amount / 1e9).toFixed(9)} MAS
-            </Descriptions.Item>
-            <Descriptions.Item label="Scheduled Period">
-              {selectedTransfer.scheduledPeriod}
-            </Descriptions.Item>
-            <Descriptions.Item label="Status">
-              {selectedTransfer.executed ? (
-                <Text type="success">Executed</Text>
-              ) : selectedTransfer.scheduledPeriod <= currentPeriod ? (
-                <Text type="warning">Ready to Execute</Text>
-              ) : (
-                <Text>Pending</Text>
-              )}
-            </Descriptions.Item>
-            <Descriptions.Item label="Created At">
-              {new Date(selectedTransfer.createdAt * 1000).toLocaleString()}
-            </Descriptions.Item>
-            <Descriptions.Item label="Executed At">
-              {selectedTransfer.executedAt
-                ? new Date(selectedTransfer.executedAt * 1000).toLocaleString()
-                : 'Not executed yet'}
-            </Descriptions.Item>
-          </Descriptions>
+          <Descriptions
+            bordered
+            column={1}
+            size="small"
+            items={[
+              {
+                key: 'transfer-id',
+                label: 'Transfer ID',
+                children: selectedTransfer.id,
+              },
+              {
+                key: 'recipient',
+                label: 'Recipient Address',
+                children: (
+                  <Text copyable style={{ fontFamily: 'monospace' }}>
+                    {selectedTransfer.recipient}
+                  </Text>
+                ),
+              },
+              {
+                key: 'sender',
+                label: 'Sender Address',
+                children: (
+                  <Text copyable style={{ fontFamily: 'monospace' }}>
+                    {selectedTransfer.sender}
+                  </Text>
+                ),
+              },
+              {
+                key: 'amount',
+                label: 'Amount (MAS)',
+                children: (selectedTransfer.amount / 1e9).toFixed(9),
+              },
+              {
+                key: 'scheduled-period',
+                label: 'Scheduled Period',
+                children: selectedTransfer.scheduledPeriod,
+              },
+              {
+                key: 'status',
+                label: 'Status',
+                children: selectedTransfer.executed ? (
+                  <Text type="success">Executed</Text>
+                ) : selectedTransfer.scheduledPeriod <= currentPeriod ? (
+                  <Text type="warning">Ready to Execute</Text>
+                ) : (
+                  <Text>Pending</Text>
+                ),
+              },
+              {
+                key: 'created-at',
+                label: 'Created At',
+                children: new Date(
+                  selectedTransfer.createdAt * 1000,
+                ).toLocaleString(),
+              },
+              {
+                key: 'executed-at',
+                label: 'Executed At',
+                children:
+                  selectedTransfer.executedAt !== null
+                    ? new Date(
+                        selectedTransfer.executedAt * 1000,
+                      ).toLocaleString()
+                    : 'Not executed yet',
+              },
+            ]}
+          />
         )}
       </Modal>
     </div>
