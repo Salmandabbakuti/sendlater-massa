@@ -11,26 +11,25 @@ import { getScByteCode } from './utils';
 const account = await Account.fromEnv();
 const provider = JsonRpcProvider.buildnet(account);
 
-console.log('Deploying contract...');
+console.log('Deploying async-hello contract...');
 
-const byteCode = getScByteCode('build', 'main.wasm');
+const byteCode = getScByteCode('build', 'async-hello.wasm');
 
-const name = 'Massa';
-const constructorArgs = new Args().addString(name);
+const constructorArgs = new Args();
+constructorArgs.addString('Hello World');
 
 const contract = await SmartContract.deploy(
   provider,
   byteCode,
   constructorArgs,
-  { coins: Mas.fromString('0.01') },
+  { coins: Mas.fromString('0.1') },
 );
 
 console.log('Contract deployed at:', contract.address);
 
-const events = await provider.getEvents({
-  smartContractAddress: contract.address,
+// Trigger first async call
+await contract.call('asyncHello', new Args(), {
+  coins: Mas.fromString('0.01'),
 });
 
-for (const event of events) {
-  console.log('Event message:', event.data);
-}
+console.log('Async execution started');
