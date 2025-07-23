@@ -11,9 +11,9 @@ import { getScByteCode } from './utils';
 const account = await Account.fromEnv();
 const provider = JsonRpcProvider.buildnet(account);
 
-console.log('Deploying scheduled-transfer contract...');
+console.log('Deploying SendLater contract...');
 
-const byteCode = getScByteCode('build', 'scheduled-transfer.wasm');
+const byteCode = getScByteCode('build', 'SendLater.wasm');
 
 // Constructor doesn't need arguments - just initializes the contract
 const constructorArgs = new Args();

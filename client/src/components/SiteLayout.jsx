@@ -35,7 +35,7 @@ export default function SiteLayout({ children }) {
               margin: 0,
             }}
           >
-            🚀 Massa Starter
+            🚀 SendLater
           </h3>
         </div>
         <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -59,9 +59,9 @@ export default function SiteLayout({ children }) {
           target="_blank"
           rel="noopener noreferrer"
         >
-          ©{new Date().getFullYear()} Massa Starter. Powered by Massa
+          ©{new Date().getFullYear()} SendLater. Powered by Massa
         </a>
-        <p style={{ fontSize: '12px' }}>v0.0.2</p>
+        <p style={{ fontSize: '12px' }}>v0.1.2</p>
       </Footer>
     </Layout>
   );

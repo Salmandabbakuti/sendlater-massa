@@ -10,9 +10,12 @@ import {
   Statistic,
   Modal,
   Descriptions,
+  Tag,
 } from 'antd';
 import {
   ClockCircleOutlined,
+  SwapOutlined,
+  DollarOutlined,
   SendOutlined,
   ReloadOutlined,
   EyeOutlined,
@@ -31,7 +34,7 @@ import './App.css';
 
 const { Title, Text } = Typography;
 
-const CONTRACT_ADDRESS = 'AS1nhrVT666KzByEtm3MgSjbgfEL8diLQDwn84WuqSHwjGtCzaju';
+const CONTRACT_ADDRESS = 'AS1tczYTPcs8cNiqnKHM5TGANzPZA5HnFQA7iDyEttZ85wD7su99';
 
 const massaClient = JsonRpcProvider.buildnet();
 const contract = new SmartContract(massaClient, CONTRACT_ADDRESS);
@@ -164,22 +167,39 @@ export default function App() {
   const columns = [
     {
       title: 'ID',
-      dataIndex: 'id',
       key: 'id',
       width: 50,
+      render: ({ id }) => <Tag color="cyan">#{id}</Tag>,
+    },
+    {
+      title: 'Recipient',
+      dataIndex: 'recipient',
+      key: 'recipient',
+      render: (recipient) => (
+        <Text
+          copyable={{
+            text: recipient,
+            onCopy: () => message.success('Recipient address copied!'),
+          }}
+          style={{ fontFamily: 'monospace', fontSize: '12px' }}
+        >
+          {`${recipient.slice(0, 6)}...${recipient.slice(-4)}`}
+        </Text>
+      ),
+      width: 120,
     },
     {
       title: 'Amount (MAS)',
       dataIndex: 'amount',
       key: 'amount',
       render: (amount) => (amount / 1e9).toFixed(4),
-      width: 120,
+      width: 100,
     },
     {
       title: 'Period',
       dataIndex: 'scheduledPeriod',
       key: 'scheduledPeriod',
-      width: 100,
+      width: 80,
     },
     {
       title: 'Status',
@@ -193,6 +213,23 @@ export default function App() {
           return <Text>Pending</Text>;
         }
       },
+      width: 80,
+    },
+    {
+      title: 'Executed At',
+      dataIndex: 'executedAt',
+      key: 'executedAt',
+      render: (executedAt) =>
+        executedAt !== null
+          ? new Date(executedAt).toLocaleString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+            })
+          : '-',
       width: 100,
     },
     {
@@ -214,14 +251,12 @@ export default function App() {
     <div className="App">
       <header className="App-header">
         <MassaLogo />
-        <Title level={2} style={{ margin: '16px 0 8px' }}>
-          Scheduled Transfers
-        </Title>
+        <Title level={2}>SendLater</Title>
       </header>
 
       <div
         className="content"
-        style={{ padding: '20px', maxWidth: 1000, margin: '0 auto' }}
+        style={{ padding: '10px', maxWidth: 1300, margin: '0 auto' }}
       >
         <Space direction="vertical" style={{ width: '100%' }}>
           {/* Quick Stats */}
@@ -236,13 +271,25 @@ export default function App() {
             }
           >
             <Space size="large" wrap>
-              <Statistic title="Total Transfers" value={transferCount} />
+              <Statistic
+                title="Total Transfers"
+                prefix={<SwapOutlined />}
+                value={transferCount}
+                valueStyle={{ color: '#1890ff', fontWeight: 'bold' }}
+              />
               <Statistic
                 title="Balance"
                 value={(contractBalance / 1e9).toFixed(4)}
+                prefix={<DollarOutlined />}
+                valueStyle={{ color: '#52c41a', fontWeight: 'bold' }}
                 suffix="MAS"
               />
-              <Statistic title="Current Period" value={currentPeriod} />
+              <Statistic
+                prefix={<ClockCircleOutlined />}
+                title="Current Period"
+                value={currentPeriod}
+                valueStyle={{ color: '#faad14', fontWeight: 'bold' }}
+              />
             </Space>
           </Card>
 
@@ -325,6 +372,7 @@ export default function App() {
             label="Scheduled Period"
             hasFeedback
             validateFirst
+            help={`Current period is ${currentPeriod}. Choose a future period.`}
             rules={[
               { required: true, message: 'Enter period' },
               // {
@@ -358,7 +406,11 @@ export default function App() {
 
       {/* Transfer Details Modal */}
       <Modal
-        title={`Transfer Details - ID ${selectedTransfer?.id}`}
+        title={
+          <Text strong>
+            Transfer Details <Tag color="cyan">#{selectedTransfer?.id}</Tag>
+          </Text>
+        }
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
         footer={[
@@ -377,7 +429,7 @@ export default function App() {
               {
                 key: 'transfer-id',
                 label: 'Transfer ID',
-                children: selectedTransfer.id,
+                children: <Tag color="cyan">{selectedTransfer.id}</Tag>,
               },
               {
                 key: 'recipient',
@@ -421,18 +473,34 @@ export default function App() {
               {
                 key: 'created-at',
                 label: 'Created At',
-                children: new Date(
-                  selectedTransfer.createdAt * 1000,
-                ).toLocaleString(),
+                children: new Date(selectedTransfer.createdAt).toLocaleString(
+                  'en-US',
+                  {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                  },
+                ),
               },
               {
                 key: 'executed-at',
                 label: 'Executed At',
                 children:
                   selectedTransfer.executedAt !== null
-                    ? new Date(
-                        selectedTransfer.executedAt * 1000,
-                      ).toLocaleString()
+                    ? new Date(selectedTransfer.executedAt).toLocaleString(
+                        'en-US',
+                        {
+                          month: 'long',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                        },
+                      )
                     : 'Not executed yet',
               },
             ]}

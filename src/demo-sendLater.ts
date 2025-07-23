@@ -5,18 +5,17 @@ import {
   Mas,
   SmartContract,
   JsonRpcProvider,
-  bytesToStr,
 } from '@massalabs/massa-web3';
 
 const account = await Account.fromEnv();
 const provider = JsonRpcProvider.buildnet(account);
 
 // Try to read contract address from config file
-let CONTRACT_ADDRESS = 'AS1nhrVT666KzByEtm3MgSjbgfEL8diLQDwn84WuqSHwjGtCzaju'; // Fallback address
+let CONTRACT_ADDRESS = 'AS1tczYTPcs8cNiqnKHM5TGANzPZA5HnFQA7iDyEttZ85wD7su99'; // Fallback address
 
 const contract = new SmartContract(provider, CONTRACT_ADDRESS);
 
-console.log('🚀 Starting Scheduled Transfer Demo...');
+console.log('🚀 Starting SendLater Demo...');
 
 // Get current node status to determine current period
 const currentSlot = await provider.client.getCurrentSlot();
@@ -25,11 +24,11 @@ console.log('Current period:', typeof currentSlot.period);
 // Schedule a transfer for 100 periods in the future
 const futureperiod = BigInt(currentSlot.period) + 5n;
 const recipientAddress = 'AU15bZP26cUAc2jtXStAqnobi8xQHGwnPkGzsXBcnG5tAKEANYas'; // Example address
-const transferAmount = Mas.fromString('2'); // 2 MAS
+const transferAmount = Mas.fromString('0.1'); // 0.1 MAS
 
 console.log('\n📅 Scheduling a transfer...');
 console.log('Recipient:', recipientAddress);
-console.log('Amount:', '2 MAS');
+console.log('Amount:', '0.1 MAS');
 console.log('Scheduled for period:', futureperiod.toString());
 
 try {
