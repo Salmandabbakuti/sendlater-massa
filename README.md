@@ -1,6 +1,23 @@
 # ⏰ SendLater - Scheduled Transfers on Massa
 
+## 🌟 Overview
+
 SendLater is a revolutionary DeFi application that brings scheduling capabilities to cryptocurrency transfers on the Massa blockchain. Whether you want to make recurring payments, implement vesting schedules, or simply schedule a transfer, SendLater provides a secure and user-friendly solution. Set it and forget it - your transfers will execute automatically at the specified time.
+
+**What SendLater Does Today:**
+- **Schedule Future Transfers**: Set up MAS token transfers to execute at any future date and time
+- **Autonomous Execution**: Transfers execute automatically using Massa's unique async smart contract capabilities
+- **Transfer Management**: View, track, and monitor all your scheduled transfers in real-time
+- **Secure & Transparent**: All transfers are recorded on-chain with complete audit trails
+- **User-Friendly Interface**: Modern React-based dashboard for easy transfer scheduling and monitoring
+- **Real-Time Updates**: Live status updates for all transfers, including pending and executed transfers
+
+**Real-World Use Cases:**
+- **Timed Payments**: Schedule payments to execute at specific dates (salary payments, contract settlements)
+- **Investment Scheduling**: Automate token transfers for dollar-cost averaging or scheduled investments
+- **Gift Transfers**: Schedule surprise transfers for birthdays, anniversaries, or special occasions
+- **Business Payments**: Set up vendor payments or team compensations in advance
+- **Escrow Services**: Create time-locked transfers for trustless transactions
 
 ![Main Dashboard](https://github.com/user-attachments/assets/649384ef-8e5f-42a3-8ed8-cd10d10e8e47)
 
@@ -18,9 +35,11 @@ SendLater is a revolutionary DeFi application that brings scheduling capabilitie
 - [Safety & Security](#safety--security)
 - [License](#license)
 
-## 🌟 Overview
+**Future Vision:**
 
-SendLater is a revolutionary DeFi application that brings scheduling capabilities to cryptocurrency transfers on the Massa blockchain. In today's fast-paced world, managing financial obligations can be challenging - missed credit card payments, forgotten utility bills, or delayed loan EMIs can significantly impact your credit score and result in costly penalties.
+While currently focused on basic transfer scheduling, SendLater is headed towards becoming a comprehensive financial automation platform. Future developments will include recurring payment templates, bill reminder integrations, multi-currency support, and advanced financial planning tools - all designed to help you maintain perfect payment discipline and optimize your financial health.
+
+In today's fast-paced world, managing financial obligations can be challenging - missed credit card payments, forgotten utility bills, or delayed loan EMIs can significantly impact your credit score and result in costly penalties.
 
 **The Problem We're Solving:**
 - **Missed Payments**: Forgetting to pay bills on time leads to late fees and credit score damage
@@ -32,20 +51,13 @@ SendLater is a revolutionary DeFi application that brings scheduling capabilitie
 **The SendLater Solution:**
 SendLater addresses these real-world financial challenges by enabling you to schedule payments in advance. Whether it's credit card bills, postpaid mobile payments, loan EMIs, or recurring subscriptions, you can set them up once and never worry about missing a payment again.
 
-Built with modern web technologies and leveraging Massa's unique autonomous smart contract capabilities, SendLater offers:
-
-- **Time-based Transfer Scheduling**: Schedule transfers for any future period - perfect for bill payments
-- **Automatic Execution**: Transfers execute automatically without manual intervention - no more missed deadlines
+- **Timed Payments**: Schedule payments to execute at specific dates (salary payments, contract settlements)
+- **Investment Scheduling**: Automate token transfers for dollar-cost averaging or scheduled investments
+- **Gift Transfers**: Schedule surprise transfers for birthdays, anniversaries, or special occasions
+- **Business Payments**: Set up vendor payments or team compensations in advance
+- **Escrow Services**: Create time-locked transfers for trustless transactions
 - **Financial Discipline**: Build better money management habits through automated scheduling
 - **Credit Protection**: Never miss payments that could harm your credit score
-- **Penalty Avoidance**: Eliminate late fees and interest charges from forgotten payments
-- **User-friendly Interface**: Clean, intuitive React-based frontend for easy setup
-- **Real-time Monitoring**: Track all your scheduled transfers with live status updates
-- **Transparent History**: Complete audit trail of all transfers for financial record-keeping
-
-**Future Vision:**
-
-While currently focused on basic transfer scheduling, SendLater is headed towards becoming a comprehensive financial automation platform. Future developments will include recurring payment templates, bill reminder integrations, multi-currency support, and advanced financial planning tools - all designed to help you maintain perfect payment discipline and optimize your financial health.
 
 ## ✨ Features
 
