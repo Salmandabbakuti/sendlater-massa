@@ -3,10 +3,11 @@ import { message } from 'antd';
 import { getWallets } from '@massalabs/wallet-provider';
 import { WalletContext } from '../contexts/WalletContext';
 import '@ant-design/v5-patch-for-react-19';
+import { formatMas } from '@massalabs/massa-web3';
 
 export default function Web3Provider({ children }) {
   const [mounted, setMounted] = useState(false);
-  const [account, setAccount] = useState(null);
+  const [account, setAccount] = useState(null); // This will be the full account object
   const [connectedWallet, setConnectedWallet] = useState(null);
   const [availableWallets, setAvailableWallets] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -37,9 +38,14 @@ export default function Web3Provider({ children }) {
         for (const wallet of wallets) {
           const accounts = await wallet.accounts();
           if (accounts && accounts.length > 0) {
-            setAccount(accounts[0].address);
+            const primaryAccount = accounts[0];
+            // fetch balance and add property to account
+            const balance = await primaryAccount.balance(true);
+            const balanceString = `${formatMas(balance || 0n)} MAS`;
+            primaryAccount.balanceString = balanceString; // Add balance to account object
+            setAccount(primaryAccount); // Store the account object
             setConnectedWallet(wallet);
-            console.log('Found existing connection:', accounts[0]);
+            console.log('Found existing connection:', primaryAccount);
             break;
           }
         }
@@ -75,7 +81,11 @@ export default function Web3Provider({ children }) {
       const existingAccounts = await wallet.accounts();
       if (existingAccounts && existingAccounts.length > 0) {
         const primaryAccount = existingAccounts[0];
-        setAccount(primaryAccount.address);
+        // fetch balance and add property to account
+        const balance = await primaryAccount.balance(true);
+        const balanceString = `${formatMas(balance || 0n)} MAS`;
+        primaryAccount.balanceString = balanceString; // Add balance to account object
+        setAccount(primaryAccount); // Store the account object
         setConnectedWallet(wallet);
         message.success(`Already connected to ${walletName}!`);
         console.log('Using existing connection:', primaryAccount);
@@ -90,7 +100,7 @@ export default function Web3Provider({ children }) {
 
         if (accounts && accounts.length > 0) {
           const primaryAccount = accounts[0];
-          setAccount(primaryAccount.address);
+          setAccount(primaryAccount); // Store the account object
           setConnectedWallet(wallet);
 
           message.success(`Successfully connected to ${walletName}!`);
