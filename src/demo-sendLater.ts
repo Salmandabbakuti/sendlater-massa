@@ -5,6 +5,8 @@ import {
   Mas,
   SmartContract,
   JsonRpcProvider,
+  U64,
+  bytesToStr,
 } from '@massalabs/massa-web3';
 
 const account = await Account.fromEnv();
@@ -35,8 +37,7 @@ console.log('Scheduled for period:', futureperiod.toString());
 try {
   const scheduleArgs = new Args()
     .addString(recipientAddress)
-    .addU64(futureperiod)
-    .serialize();
+    .addU64(futureperiod);
   const operation = await contract.call('scheduleTransfer', scheduleArgs, {
     coins: transferAmount,
   });
@@ -50,24 +51,23 @@ try {
   // Wait a moment and then check the contract state
   console.log('\n📊 Checking contract state...');
 
-  // Get transfer count - function takes no parameters
-  const countResult = await contract.read('getTransferCount');
-  // Use Args to deserialize the response
-  const countArgs = new Args(countResult.value);
-  const transferCount = countArgs.nextU64();
-  console.log('Total transfers:', transferCount.toString());
-
   // Get contract balance - function takes no parameters
   const balanceResult = await contract.read('getContractBalance', new Args());
   const balanceArgs = new Args(balanceResult.value);
   const balance = balanceArgs.nextU64();
   console.log('Contract balance:', (Number(balance) / 1e9).toFixed(9), 'MAS');
 
+  // Get transfer count - function takes no parameters
+  const transferCountResult = await contract.read('getTransferCount');
+  // Use Args to deserialize the response
+  const transferCount = U64.fromBytes(transferCountResult.value);
+  console.log('Total transfers:', transferCount.toString());
+
   // Get details of last transfer
-  const transferArgs = new Args().addU64(transferCount).serialize(); // Get last transfer (ID = transferCount)
-  const transferResult = await contract.read('getTransfer', transferArgs);
+  const getTransferArgs = new Args().addU64(transferCount); // Get last transfer (ID = transferCount)
+  const transferResult = await contract.read('getTransfer', getTransferArgs);
   // The transfer details are returned as a string, so we can use bytesToStr
-  const transferDetails = new Args(transferResult.value).nextString();
+  const transferDetails = bytesToStr(transferResult.value);
   console.log('Last transfer details:', transferDetails);
 
   console.log('\n🎉 Demo completed successfully!');
@@ -76,5 +76,5 @@ try {
   );
   console.log('You can monitor this using the React frontend.');
 } catch (error) {
-  console.error('❌ Error during demo:', error);
+  console.error('❌ Error during ScheduleLater demo:', error);
 }

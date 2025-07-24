@@ -124,7 +124,7 @@ SendLater addresses these real-world financial challenges by enabling you to sch
    
    Create a `.env` file in the root directory:
    ```env
-   WALLET_SECRET_KEY="your_wallet_secret_key"
+   PRIVATE_KEY="your_wallet_private_key"
    ```
 
 ### 🔨 Compile Contracts
@@ -249,7 +249,7 @@ interface Transfer {
 
 Deploy the frontend to decentralized storage. Learn more about process at [Massa DeWeb](https://docs.massa.net/docs/deweb/cli/upload).
 
-> Note: export WALLET_SECRET_KEY in your terminal before running the upload command.
+> Note: export SECRET_KEY in your terminal before running the upload command.
 
 ```bash
 export SECRET_KEY=<your_secret_key>
@@ -278,7 +278,7 @@ To assign a MNS to your website navigate to [Massa Name Service](https://mns.mas
 
 | Network | Contract Address | Explorer Link |
 |---------|------------------|---------------|
-| Massa Testnet | `AS12q1Nf5umfL7H5Cp5MTwey9DvcrUwG6dycqt9eRi5FmsxBmmYdt` | [View on Explorer](https://test.massa.net) |
+| Massa Testnet | `AS17YtGELtp2ug9VTAU8GLPzPHAtHzgdFty4CSwDgChBqQPDqVi3` | [View on Explorer](https://test.massa.net) |
 | Massa Mainnet | Coming Soon | - |
 
 ### Frontend Deployments
