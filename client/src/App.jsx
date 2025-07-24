@@ -10,7 +10,6 @@ import {
   Typography,
   Statistic,
   Modal,
-  Descriptions,
   Tag,
   DatePicker,
   Alert,
@@ -18,13 +17,13 @@ import {
   Col,
   Divider,
   Flex,
+  Spin,
 } from 'antd';
 import {
   ClockCircleOutlined,
   SwapOutlined,
   DollarOutlined,
   SendOutlined,
-  ReloadOutlined,
   EyeOutlined,
   PlusOutlined,
   CalendarOutlined,
@@ -464,145 +463,150 @@ export default function App() {
           layout="vertical"
           style={{ marginTop: 16 }}
         >
-          <Form.Item
-            name="recipient"
-            label="Recipient Address"
-            hasFeedback
-            rules={[
-              { required: true, message: 'Enter recipient address' },
-              // {
-              //   pattern: /^A[SU][A-Za-z0-9]{49}$/,
-              //   message: 'Invalid Massa address (must start with AS or AU)',
-              // },
-            ]}
-          >
-            <Input placeholder="Recipient Address (AS1... or AU1...)" />
-          </Form.Item>
+          <Spin spinning={loading} tip="Transaction in progress...">
+            <Form.Item
+              name="recipient"
+              label="Recipient Address"
+              hasFeedback
+              rules={[
+                { required: true, message: 'Enter recipient address' },
+                // {
+                //   pattern: /^A[SU][A-Za-z0-9]{49}$/,
+                //   message: 'Invalid Massa address (must start with AS or AU)',
+                // },
+              ]}
+            >
+              <Input placeholder="Recipient Address (AS1... or AU1...)" />
+            </Form.Item>
 
-          <Form.Item
-            name="amount"
-            label="Amount (MAS)"
-            rules={[
-              { required: true, message: 'Enter amount' },
-              // {
-              //   type: 'number',
-              //   min: 0.000000001,
-              //   message: 'Amount must be > 0',
-              // },
-            ]}
-          >
-            <Input type="number" step="0.001" placeholder="Amount (MAS)" />
-          </Form.Item>
+            <Form.Item
+              name="amount"
+              label="Amount (MAS)"
+              rules={[
+                { required: true, message: 'Enter amount' },
+                // {
+                //   type: 'number',
+                //   min: 0.000000001,
+                //   message: 'Amount must be > 0',
+                // },
+              ]}
+            >
+              <Input type="number" step="0.001" placeholder="Amount (MAS)" />
+            </Form.Item>
 
-          <Form.Item
-            label="Execution Time"
-            help="Select when you want the transfer to be executed"
-          >
-            <DatePicker
-              showTime
-              showNow={false}
-              placeholder="Select date and time"
-              style={{ width: '100%' }}
-              onChange={handleDateTimeChange}
-              disabledDate={(current) =>
-                current && current.isBefore(dayjs(), 'day')
-              }
-              disabledTime={(current) => {
-                if (!current || !current.isSame(dayjs(), 'day')) {
-                  return {}; // No restrictions for future dates
+            <Form.Item
+              label="Execution Time"
+              help="Select when you want the transfer to be executed"
+            >
+              <DatePicker
+                showTime
+                showNow={false}
+                placeholder="Select date and time"
+                style={{ width: '100%' }}
+                onChange={handleDateTimeChange}
+                disabledDate={(current) =>
+                  current && current.isBefore(dayjs(), 'day')
                 }
-                const now = dayjs();
-                return {
-                  disabledHours: () =>
-                    Array.from({ length: now.hour() }, (_, i) => i),
-                  disabledMinutes: (selectedHour) =>
-                    selectedHour === now.hour()
-                      ? Array.from({ length: now.minute() }, (_, i) => i)
-                      : [],
-                  disabledSeconds: (selectedHour, selectedMinute) =>
-                    selectedHour === now.hour() &&
-                    selectedMinute === now.minute()
-                      ? Array.from({ length: now.second() }, (_, i) => i)
-                      : [],
-                };
-              }}
-            />
-          </Form.Item>
+                disabledTime={(current) => {
+                  if (!current || !current.isSame(dayjs(), 'day')) {
+                    return {}; // No restrictions for future dates
+                  }
+                  const now = dayjs();
+                  return {
+                    disabledHours: () =>
+                      Array.from({ length: now.hour() }, (_, i) => i),
+                    disabledMinutes: (selectedHour) =>
+                      selectedHour === now.hour()
+                        ? Array.from({ length: now.minute() }, (_, i) => i)
+                        : [],
+                    disabledSeconds: (selectedHour, selectedMinute) =>
+                      selectedHour === now.hour() &&
+                      selectedMinute === now.minute()
+                        ? Array.from({ length: now.second() }, (_, i) => i)
+                        : [],
+                  };
+                }}
+              />
+            </Form.Item>
 
-          {calculatedPeriod && (
-            <Alert
-              type="info"
-              style={{ marginBottom: 16 }}
-              message="Period Calculation"
-              description={
-                <div>
-                  <p>
-                    <strong>Target Period:</strong>{' '}
-                    {calculatedPeriod.targetPeriod} (±{PERIOD_BUFFER} buffer)
-                  </p>
-                  <p>
-                    <strong>Periods to add:</strong>{' '}
-                    {calculatedPeriod.periodsToAdd + PERIOD_BUFFER}
-                  </p>
-                  <p>
-                    <strong>Estimated execution:</strong>{' '}
-                    {calculatedPeriod.estimatedExecutionTime.format(
-                      'MMM D, YYYY [at] h:mm:ss A',
-                    )}
-                  </p>
-                  <p style={{ fontSize: '12px', color: '#666' }}>
-                    <em>
-                      Note: Execution time may vary by ±
-                      {PERIOD_BUFFER * MASSA_PERIOD_DURATION}s due to network
-                      timing
-                    </em>
-                  </p>
-                </div>
-              }
-            />
-          )}
+            {calculatedPeriod && (
+              <Alert
+                type="info"
+                style={{ marginBottom: 16 }}
+                message="Period Calculation"
+                description={
+                  <div>
+                    <p>
+                      <strong>Target Period:</strong>{' '}
+                      {calculatedPeriod.targetPeriod} (±{PERIOD_BUFFER} buffer)
+                    </p>
+                    <p>
+                      <strong>Periods to add:</strong>{' '}
+                      {calculatedPeriod.periodsToAdd + PERIOD_BUFFER}
+                    </p>
+                    <p>
+                      <strong>Estimated execution:</strong>{' '}
+                      {calculatedPeriod.estimatedExecutionTime.format(
+                        'MMM D, YYYY [at] h:mm:ss A',
+                      )}
+                    </p>
+                    <p style={{ fontSize: '12px', color: '#666' }}>
+                      <em>
+                        Note: Execution time may vary by ±
+                        {PERIOD_BUFFER * MASSA_PERIOD_DURATION}s due to network
+                        timing
+                      </em>
+                    </p>
+                  </div>
+                }
+              />
+            )}
 
-          <Form.Item
-            name="scheduledPeriod"
-            label="Scheduled Period (Advanced)"
-            hasFeedback
-            validateFirst
-            help={`Current period: ${currentPeriod}. Each period = ${MASSA_PERIOD_DURATION}s. You can manually override the calculated period.`}
-            rules={[
-              {
-                required: true,
-                message: 'Select a time or enter period manually',
-              },
-              // {
-              //   type: 'number',
-              //   min: currentPeriod + 1,
-              //   message: `Must be > ${currentPeriod}`,
-              // },
-            ]}
-          >
-            <Input
-              type="number"
-              placeholder={`Period (>${currentPeriod})`}
-              suffix={<CalendarOutlined />}
-            />
-          </Form.Item>
+            <Form.Item
+              name="scheduledPeriod"
+              label="Scheduled Period (Advanced)"
+              hasFeedback
+              validateFirst
+              help={`Current period: ${currentPeriod}. Each period = ${MASSA_PERIOD_DURATION}s. You can manually override the calculated period.`}
+              rules={[
+                {
+                  required: true,
+                  message: 'Select a time or enter period manually',
+                },
+                // {
+                //   type: 'number',
+                //   min: currentPeriod + 1,
+                //   message: `Must be > ${currentPeriod}`,
+                // },
+              ]}
+            >
+              <Input
+                type="number"
+                placeholder={`Period (>${currentPeriod})`}
+                suffix={<CalendarOutlined />}
+              />
+            </Form.Item>
 
-          <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
-            <Space>
-              <Button shape="round" onClick={() => setTransferModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                type="primary"
-                shape="round"
-                htmlType="submit"
-                loading={loading}
-                icon={<SendOutlined />}
-              >
-                Schedule
-              </Button>
-            </Space>
-          </Form.Item>
+            <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
+              <Space>
+                <Button
+                  shape="round"
+                  onClick={() => setTransferModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="primary"
+                  shape="round"
+                  htmlType="submit"
+                  loading={loading}
+                  icon={<SendOutlined />}
+                >
+                  Schedule
+                </Button>
+              </Space>
+            </Form.Item>
+          </Spin>
         </Form>
       </Modal>
 
@@ -626,14 +630,8 @@ export default function App() {
       >
         {selectedTransfer && (
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
+            {/* Addresses - Keep as you liked */}
             <Row gutter={[16, 16]}>
-              <Col span={12}>
-                <Card size="small" title="Recipient">
-                  <Text copyable style={{ fontFamily: 'monospace' }}>
-                    {selectedTransfer.recipient}
-                  </Text>
-                </Card>
-              </Col>
               <Col span={12}>
                 <Card size="small" title="Sender">
                   <Text copyable style={{ fontFamily: 'monospace' }}>
@@ -641,18 +639,30 @@ export default function App() {
                   </Text>
                 </Card>
               </Col>
-            </Row>
-
-            <Row gutter={[16, 16]}>
-              <Col span={8}>
-                <Card size="small" title="Amount">
-                  <Text strong style={{ fontSize: '16px' }}>
-                    {formatMas(selectedTransfer.amount)} MAS
+              <Col span={12}>
+                <Card size="small" title="Recipient">
+                  <Text copyable style={{ fontFamily: 'monospace' }}>
+                    {selectedTransfer.recipient}
                   </Text>
                 </Card>
               </Col>
-              <Col span={8}>
-                <Card size="small" title="Status">
+            </Row>
+
+            {/* Basic Info - Clean and prominent */}
+            <Card size="small" title="Overview">
+              <Space
+                direction="vertical"
+                size="middle"
+                style={{ width: '100%' }}
+              >
+                <Flex justify="space-between" align="center">
+                  <Text type="secondary">Amount:</Text>
+                  <Text strong style={{ fontSize: '18px', color: '#1890ff' }}>
+                    {formatMas(selectedTransfer.amount)} MAS
+                  </Text>
+                </Flex>
+                <Flex justify="space-between" align="center">
+                  <Text type="secondary">Status:</Text>
                   {selectedTransfer.executed ? (
                     <Tag color="success">Executed</Tag>
                   ) : selectedTransfer.scheduledPeriod <= currentPeriod ? (
@@ -660,42 +670,52 @@ export default function App() {
                   ) : (
                     <Tag color="processing">Pending</Tag>
                   )}
-                </Card>
-              </Col>
-              <Col span={8}>
-                <Card size="small" title="Schedule">
-                  {selectedTransfer.executed ? (
-                    <Text strong>
-                      {selectedTransfer.executedAt
-                        ? dayjs(selectedTransfer.executedAt).format(
-                            'MMM D, YYYY h:mm:ss A',
-                          )
-                        : 'Unknown'}
-                    </Text>
-                  ) : (
-                    <Space direction="vertical" size="small">
-                      <Text
-                        strong
-                        style={{ fontSize: '12px', color: '#1890ff' }}
-                      >
-                        {(() => {
-                          const estimated = getEstimatedExecutionTime(
-                            selectedTransfer.scheduledPeriod,
-                          );
-                          return estimated === 'Ready to execute'
-                            ? 'Ready now'
-                            : estimated.format('MMM D, YYYY h:mm:ss A');
-                        })()}
-                      </Text>
-                      <Text type="secondary" style={{ fontSize: '12px' }}>
-                        {getTimeRemaining(selectedTransfer.scheduledPeriod)}
-                      </Text>
-                    </Space>
-                  )}
-                </Card>
-              </Col>
-            </Row>
+                </Flex>
+                <Flex justify="space-between" align="center">
+                  <Text type="secondary">Time:</Text>
+                  <Space
+                    direction="vertical"
+                    size={0}
+                    style={{ textAlign: 'right' }}
+                  >
+                    {selectedTransfer.executed ? (
+                      selectedTransfer.executedAt ? (
+                        <>
+                          <Text strong>
+                            {dayjs(selectedTransfer.executedAt).format(
+                              'MMM D, YYYY h:mm:ss A',
+                            )}
+                          </Text>
+                          <Text type="secondary" style={{ fontSize: '11px' }}>
+                            {dayjs(selectedTransfer.executedAt).fromNow()}
+                          </Text>
+                        </>
+                      ) : (
+                        <Text strong>Unknown</Text>
+                      )
+                    ) : (
+                      <>
+                        <Text strong>
+                          {(() => {
+                            const estimated = getEstimatedExecutionTime(
+                              selectedTransfer.scheduledPeriod,
+                            );
+                            return estimated === 'Ready to execute'
+                              ? 'Ready now'
+                              : estimated.format('MMM D, YYYY h:mm:ss A');
+                          })()}
+                        </Text>
+                        <Text type="secondary" style={{ fontSize: '11px' }}>
+                          {getTimeRemaining(selectedTransfer.scheduledPeriod)}
+                        </Text>
+                      </>
+                    )}
+                  </Space>
+                </Flex>
+              </Space>
+            </Card>
 
+            {/* Timeline - Keep as you liked */}
             <Card size="small" title="Timeline">
               <Space direction="vertical" style={{ width: '100%' }}>
                 <Flex justify="space-between">
@@ -712,23 +732,62 @@ export default function App() {
                 </Flex>
                 <Flex justify="space-between">
                   <Text type="secondary">Execution Time:</Text>
-                  <Text>
-                    {selectedTransfer.executed
-                      ? selectedTransfer.executedAt
-                        ? dayjs(selectedTransfer.executedAt).format(
-                            'MMM D, YYYY h:mm:ss A',
-                          )
-                        : 'Unknown'
-                      : (() => {
-                          const estimated = getEstimatedExecutionTime(
-                            selectedTransfer.scheduledPeriod,
-                          );
-                          return estimated === 'Ready to execute'
-                            ? 'Ready now'
-                            : estimated.format('MMM D, YYYY h:mm:ss A');
-                        })()}
-                  </Text>
+                  <Space
+                    direction="vertical"
+                    size={0}
+                    style={{ textAlign: 'right' }}
+                  >
+                    {selectedTransfer.executed ? (
+                      selectedTransfer.executedAt ? (
+                        <>
+                          <Text>
+                            {dayjs(selectedTransfer.executedAt).format(
+                              'MMM D, YYYY h:mm:ss A',
+                            )}
+                          </Text>
+                          <Text type="secondary" style={{ fontSize: '11px' }}>
+                            {dayjs(selectedTransfer.executedAt).fromNow()}
+                          </Text>
+                        </>
+                      ) : (
+                        <Text>Unknown</Text>
+                      )
+                    ) : (
+                      <>
+                        <Text>
+                          {(() => {
+                            const estimated = getEstimatedExecutionTime(
+                              selectedTransfer.scheduledPeriod,
+                            );
+                            return estimated === 'Ready to execute'
+                              ? 'Ready now'
+                              : estimated.format('MMM D, YYYY h:mm:ss A');
+                          })()}
+                        </Text>
+                        <Text type="secondary" style={{ fontSize: '11px' }}>
+                          {getTimeRemaining(selectedTransfer.scheduledPeriod)}
+                        </Text>
+                      </>
+                    )}
+                  </Space>
                 </Flex>
+                {!selectedTransfer.executed && (
+                  <div
+                    style={{
+                      marginTop: 12,
+                      paddingTop: 12,
+                      borderTop: '1px solid #f0f0f0',
+                    }}
+                  >
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      <em>
+                        Note: Execution time may vary by ±
+                        {PERIOD_BUFFER * MASSA_PERIOD_DURATION}s due to network
+                        timing
+                      </em>
+                    </Text>
+                  </div>
+                )}
               </Space>
             </Card>
           </Space>

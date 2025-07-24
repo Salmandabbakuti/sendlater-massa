@@ -35,7 +35,7 @@ export default function SiteLayout({ children }) {
               margin: 0,
             }}
           >
-            🚀 SendLater
+            🕐 SendLater
           </h3>
         </div>
         <div style={{ display: 'flex', alignItems: 'center' }}>

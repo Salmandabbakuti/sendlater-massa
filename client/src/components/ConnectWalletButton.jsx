@@ -180,7 +180,11 @@ export default function ConnectWalletButton() {
       onClick={() => connectWallet(0)}
       style={{ marginRight: '16px' }}
     >
-      {availableWallets.length === 0 ? 'No Wallets Found' : 'Connect Wallet'}
+      {loading
+        ? 'Connecting...'
+        : availableWallets.length === 0
+        ? 'No Wallets Found'
+        : 'Connect Wallet'}
     </Button>
   );
 }
