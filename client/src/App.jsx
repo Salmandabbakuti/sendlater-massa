@@ -47,8 +47,7 @@ dayjs.extend(relativeTime);
 
 const { Title, Text } = Typography;
 
-const CONTRACT_ADDRESS =
-  'AS12q1Nf5umfL7H5Cp5MTwey9DvcrUwG6dycqt9eRi5FmsxBmmYdt';
+const CONTRACT_ADDRESS = 'AS17YtGELtp2ug9VTAU8GLPzPHAtHzgdFty4CSwDgChBqQPDqVi3';
 
 const massaClient = JsonRpcProvider.buildnet();
 const contract = new SmartContract(massaClient, CONTRACT_ADDRESS);
@@ -251,7 +250,7 @@ export default function App() {
     {
       title: 'ID',
       dataIndex: 'id',
-      width: 80,
+      sorter: (a, b) => a.id - b.id,
       render: (id) => <Tag color="blue">#{id}</Tag>,
     },
     {
@@ -263,21 +262,19 @@ export default function App() {
           copyable={{ text: recipient, tooltips: ['Copy', 'Copied!'] }}
           style={{ fontFamily: 'monospace' }}
         >
-          {`${recipient.slice(0, 6)}...${recipient.slice(-4)}`}
+          {`${recipient.slice(0, 8)}...${recipient.slice(-6)}`}
         </Text>
       ),
     },
     {
       title: 'Amount',
       dataIndex: 'amount',
-      width: 120,
       render: (amount) => <Text strong>{formatMas(amount)} MAS</Text>,
       sorter: (a, b) => a.amount - b.amount,
     },
     {
       title: 'Period',
       dataIndex: 'scheduledPeriod',
-      width: 100,
       render: (period) => (
         <Text style={{ fontFamily: 'monospace' }}>{period}</Text>
       ),
@@ -286,7 +283,6 @@ export default function App() {
     {
       title: 'Status',
       key: 'status',
-      width: 100,
       render: (_, record) => {
         if (record.executed) {
           return <Tag color="success">Executed</Tag>;
@@ -300,6 +296,7 @@ export default function App() {
     {
       title: 'Execution Time',
       key: 'estimatedExecution',
+      sorter: (a, b) => a?.executedAt - b?.executedAt,
       render: (_, record) => {
         if (record.executed) {
           return record.executedAt ? (
@@ -335,7 +332,6 @@ export default function App() {
     {
       title: 'Actions',
       key: 'actions',
-      width: 80,
       render: (_, record) => (
         <Button
           type="text"
@@ -377,7 +373,7 @@ export default function App() {
           <Col xs={24} sm={8}>
             <Card>
               <Statistic
-                title="Balance"
+                title="Contract Balance"
                 value={formatMas(contractBalance)}
                 precision={4}
                 prefix={<DollarOutlined />}
@@ -431,15 +427,19 @@ export default function App() {
             })}
             dataSource={transfers}
             rowKey="id"
-            loading={dataLoading}
             pagination={{
-              pageSize: 10,
+              responsive: true,
+              // hideOnSinglePage: true,
+              showLessItems: true,
+              pageSizeOptions: [5, 10, 25, 50, 100],
               showSizeChanger: true,
+              defaultPageSize: 10,
+              pageSize: 10,
               showQuickJumper: true,
               showTotal: (total, range) =>
                 `${range[0]}-${range[1]} of ${total} transfers`,
             }}
-            scroll={{ x: 800 }}
+            scroll={{ x: 970 }}
           />
         </Card>
       </Space>
@@ -619,7 +619,6 @@ export default function App() {
       <Modal
         title={
           <Space>
-            <EyeOutlined />
             Transfer Details
             <Tag color="blue">#{selectedTransfer?.id}</Tag>
           </Space>
@@ -666,7 +665,7 @@ export default function App() {
               </Col>
             </Row>
 
-            {/* Transfer Details - Comprehensive single card */}
+            {/* Transfer Details */}
             <Card size="small" title="Summary">
               <Descriptions
                 size="middle"

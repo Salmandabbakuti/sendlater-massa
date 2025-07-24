@@ -182,6 +182,8 @@ Visit `http://localhost:5173` to access the application.
 
 ## 🔧 Contract Functionalities
 
+The SendLater smart contract provides core functionalities for scheduling and executing transfers. It uses Massa's autonomous smart contract capabilities to handle transfers at specified future periods. You can find the contract source code in the [`assembly/contracts/sendLater.ts`](assembly/contracts/sendLater.ts) file.
+
 ### Core Functions
 
 #### `scheduleTransfer(binaryArgs: StaticArray<u8>)`
@@ -260,10 +262,10 @@ cd client
 npm run build
 npm run build
 
-# Upload to DeWeb
-npx @massalabs/deweb-cli upload build
-
+# Upload to DeWeb (vite project)
+npx @massalabs/deweb-cli upload dist
 ```
+
 After successful upload, you will get deployed address like `AS12v...2UgLS`.
 
 Next step is to assign mns name to your deployed address:

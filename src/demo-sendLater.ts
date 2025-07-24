@@ -11,7 +11,7 @@ const account = await Account.fromEnv();
 const provider = JsonRpcProvider.buildnet(account);
 
 // Try to read contract address from config file
-let CONTRACT_ADDRESS = 'AS12q1Nf5umfL7H5Cp5MTwey9DvcrUwG6dycqt9eRi5FmsxBmmYdt'; // Fallback address
+let CONTRACT_ADDRESS = 'AS17YtGELtp2ug9VTAU8GLPzPHAtHzgdFty4CSwDgChBqQPDqVi3'; // Fallback address
 
 const contract = new SmartContract(provider, CONTRACT_ADDRESS);
 
@@ -21,8 +21,9 @@ console.log('🚀 Starting SendLater Demo...');
 const currentSlot = await provider.client.getCurrentSlot();
 console.log('Current period:', typeof currentSlot.period);
 
-// Schedule a transfer for 100 periods in the future
-const futureperiod = BigInt(currentSlot.period) + 5n;
+// Schedule a transfer for 11 periods in the future(approx 3 minutes from now)
+// Note: The period is a 16-second interval, so 11 periods = 176 seconds
+const futureperiod = BigInt(currentSlot.period) + 11n;
 const recipientAddress = 'AU15bZP26cUAc2jtXStAqnobi8xQHGwnPkGzsXBcnG5tAKEANYas'; // Example address
 const transferAmount = Mas.fromString('0.1'); // 0.1 MAS
 
