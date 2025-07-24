@@ -14,6 +14,10 @@ import {
   Tag,
   DatePicker,
   Alert,
+  Row,
+  Col,
+  Divider,
+  Flex,
 } from 'antd';
 import {
   ClockCircleOutlined,
@@ -24,13 +28,18 @@ import {
   EyeOutlined,
   PlusOutlined,
   CalendarOutlined,
+  SyncOutlined,
 } from '@ant-design/icons';
 import { SmartContract, JsonRpcProvider, Args } from '@massalabs/massa-web3';
 import { parseMas, formatMas } from '@massalabs/massa-web3';
 import { MassaLogo } from '@massalabs/react-ui-kit';
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import { useWallet } from './hooks/useWallet';
 import './App.css';
+
+// Extend dayjs with relativeTime plugin
+dayjs.extend(relativeTime);
 
 const { Title, Text } = Typography;
 
@@ -52,7 +61,6 @@ export default function App() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedTransfer, setSelectedTransfer] = useState(null);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
-  const [selectedDateTime, setSelectedDateTime] = useState(null);
   const [calculatedPeriod, setCalculatedPeriod] = useState(null);
 
   // Constants for Massa network timing
@@ -70,7 +78,18 @@ export default function App() {
     return dayjs().add(secondsUntilExecution, 'seconds');
   };
 
-  // Calculate target period from selected timestamp
+  // Get human-readable time remaining using dayjs relativeTime
+  const getTimeRemaining = (scheduledPeriod) => {
+    if (scheduledPeriod <= currentPeriod) {
+      return 'Ready now';
+    }
+
+    const periodsUntilExecution = scheduledPeriod - currentPeriod;
+    const secondsUntilExecution = periodsUntilExecution * MASSA_PERIOD_DURATION;
+    const executionTime = dayjs().add(secondsUntilExecution, 'seconds');
+
+    return executionTime.fromNow(); // This gives us "in 2 hours", "in 30 minutes", etc.
+  }; // Calculate target period from selected timestamp
   const calculatePeriodFromTimestamp = (targetTimestamp) => {
     const now = dayjs();
     const target = dayjs(targetTimestamp);
@@ -96,7 +115,6 @@ export default function App() {
 
   // Handle date/time selection
   const handleDateTimeChange = (date) => {
-    setSelectedDateTime(date);
     if (date && currentPeriod > 0) {
       const calculation = calculatePeriodFromTimestamp(date.valueOf());
       setCalculatedPeriod(calculation);
@@ -192,16 +210,17 @@ export default function App() {
         .addU64(BigInt(scheduledPeriod))
         .serialize();
 
-      await provider.callSC({
+      const scheduleOp = await provider.callSC({
         func: 'scheduleTransfer',
         target: CONTRACT_ADDRESS,
         parameter: args,
         coins: amountInMas,
       });
 
+      console.log('Schedule operation result:', scheduleOp);
+      await scheduleOp.waitSpeculativeExecution();
       message.success('Transfer scheduled successfully!');
       form.resetFields();
-      setSelectedDateTime(null);
       setCalculatedPeriod(null);
       setTransferModalOpen(false);
       setTimeout(fetchContractData, 2000);
@@ -227,148 +246,132 @@ export default function App() {
   const columns = [
     {
       title: 'ID',
-      key: 'id',
-      width: '8%',
-      sorter: (a, b) => a.id - b.id,
-      render: ({ id }) => <Tag color="cyan">#{id}</Tag>,
+      dataIndex: 'id',
+      width: 80,
+      render: (id) => <Tag color="blue">#{id}</Tag>,
     },
     {
       title: 'Recipient',
       dataIndex: 'recipient',
-      key: 'recipient',
+      ellipsis: true,
       render: (recipient) => (
         <Text
-          copyable={{
-            text: recipient,
-            onCopy: () => message.success('Recipient address copied!'),
-          }}
-          style={{ fontFamily: 'monospace', fontSize: '12px' }}
+          copyable={{ text: recipient, tooltips: ['Copy', 'Copied!'] }}
+          style={{ fontFamily: 'monospace' }}
         >
-          {`${recipient.slice(0, 4)}...${recipient.slice(-3)}`}
+          {`${recipient.slice(0, 6)}...${recipient.slice(-4)}`}
         </Text>
       ),
-      width: '15%',
     },
     {
-      title: 'Amount (MAS)',
+      title: 'Amount',
       dataIndex: 'amount',
-      key: 'amount',
+      width: 120,
+      render: (amount) => <Text strong>{formatMas(amount)} MAS</Text>,
       sorter: (a, b) => a.amount - b.amount,
-      render: (amount) => formatMas(amount),
-      width: '12%',
     },
     {
       title: 'Period',
       dataIndex: 'scheduledPeriod',
-      key: 'scheduledPeriod',
-      width: '10%',
-      responsive: ['md'],
+      width: 100,
+      render: (period) => (
+        <Text style={{ fontFamily: 'monospace' }}>{period}</Text>
+      ),
       sorter: (a, b) => a.scheduledPeriod - b.scheduledPeriod,
     },
     {
       title: 'Status',
       key: 'status',
+      width: 100,
       render: (_, record) => {
         if (record.executed) {
-          return <Text type="success">Executed</Text>;
+          return <Tag color="success">Executed</Tag>;
         } else if (record.scheduledPeriod <= currentPeriod) {
-          return <Text type="warning">Ready</Text>;
+          return <Tag color="warning">Ready</Tag>;
         } else {
-          return <Text>Pending</Text>;
+          return <Tag color="processing">Pending</Tag>;
         }
       },
-      width: '10%',
     },
     {
-      title: 'Estimated Execution',
+      title: 'Execution Time',
       key: 'estimatedExecution',
       render: (_, record) => {
         if (record.executed) {
-          return <Text type="secondary">-</Text>;
+          return record.executedAt ? (
+            dayjs(record.executedAt).format('MMM D, h:mm:ss A')
+          ) : (
+            <Text type="secondary">-</Text>
+          );
         }
 
-        const estimated = getEstimatedExecutionTime(record.scheduledPeriod);
-        if (estimated === 'Ready to execute') {
+        const timeRemaining = getTimeRemaining(record.scheduledPeriod);
+        if (timeRemaining === 'Ready now') {
           return (
             <Text type="warning" strong>
-              Ready
+              Ready Now
             </Text>
           );
         }
 
-        const periodsUntilExecution = record.scheduledPeriod - currentPeriod;
-        const minutesUntilExecution = Math.ceil(
-          (periodsUntilExecution * MASSA_PERIOD_DURATION) / 60,
-        );
-
+        const estimated = getEstimatedExecutionTime(record.scheduledPeriod);
         return (
-          <div style={{ fontSize: '12px' }}>
-            <div>{estimated.format('MMM D, YYYY, hh:mm:ss A')}</div>
-            <Text type="secondary" style={{ fontSize: '10px' }}>
-              {minutesUntilExecution < 60
-                ? `${minutesUntilExecution}m`
-                : `${Math.ceil(minutesUntilExecution / 60)}h`}
+          <Space direction="vertical" size={0}>
+            <Text style={{ fontSize: '12px' }}>
+              {estimated.format('MMM D, h:mm:ss A')}
             </Text>
-          </div>
+            <Text type="secondary" style={{ fontSize: '11px' }}>
+              {timeRemaining}
+            </Text>
+          </Space>
         );
       },
-      width: '20%',
-      responsive: ['lg'],
-    },
-    {
-      title: 'Executed At',
-      dataIndex: 'executedAt',
-      key: 'executedAt',
-      sorter: (a, b) => dayjs(a.executedAt).unix() - dayjs(b.executedAt).unix(),
-      render: (executedAt) =>
-        executedAt !== null
-          ? dayjs(executedAt).format('MMM D, YYYY, hh:mm A')
-          : '-',
-      width: '15%',
-      responsive: ['sm'],
+      responsive: ['md'],
     },
     {
       title: 'Actions',
       key: 'actions',
+      width: 80,
       render: (_, record) => (
         <Button
           type="text"
+          shape="circle"
           icon={<EyeOutlined />}
           onClick={() => handleViewTransfer(record)}
-          size="small"
         />
       ),
-      width: '10%',
     },
   ];
 
   return (
     <div className="App">
-      <header className="App-header">
-        <MassaLogo />
-        <Title level={2}>SendLater</Title>
-      </header>
+      <Space
+        direction="vertical"
+        size="large"
+        style={{ width: '100%', padding: '0 16px' }}
+      >
+        {/* Header */}
+        <Flex justify="center" align="center" gap="middle">
+          <MassaLogo />
+          <Title level={2} style={{ margin: 0 }}>
+            SendLater
+          </Title>
+        </Flex>
 
-      <div className="content">
-        <Space direction="vertical" style={{ width: '100%' }}>
-          {/* Quick Stats */}
-          <Card
-            extra={
-              <Button
-                title="Refresh"
-                shape="circle"
-                icon={<ReloadOutlined spin={dataLoading} />}
-                onClick={fetchContractData}
-              />
-            }
-          >
-            <Space size="large" wrap>
+        {/* Stats Cards */}
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={8}>
+            <Card>
               <Statistic
                 title="Total Transfers"
                 prefix={<SwapOutlined />}
                 value={transferCount}
                 valueStyle={{ color: '#1890ff', fontWeight: 'bold' }}
               />
+            </Card>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Card>
               <Statistic
                 title="Balance"
                 value={formatMas(contractBalance)}
@@ -377,6 +380,10 @@ export default function App() {
                 valueStyle={{ color: '#52c41a', fontWeight: 'bold' }}
                 suffix="MAS"
               />
+            </Card>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Card>
               <Statistic
                 prefix={<ClockCircleOutlined />}
                 title="Current Period"
@@ -384,15 +391,16 @@ export default function App() {
                 formatter={(val) => val}
                 valueStyle={{ color: '#faad14', fontWeight: 'bold' }}
               />
-            </Space>
-          </Card>
+            </Card>
+          </Col>
+        </Row>
 
-          {/* Transfers Table */}
-          <Card
-            title={`Transfers (${transfers.length})`}
-            extra={
+        {/* Transfers Table */}
+        <Card
+          title={`Scheduled Transfers (${transfers.length})`}
+          extra={
+            <Space>
               <Button
-                title="New Transfer"
                 type="primary"
                 shape="round"
                 icon={<PlusOutlined />}
@@ -400,39 +408,56 @@ export default function App() {
               >
                 Transfer
               </Button>
-            }
-          >
-            <Table
-              columns={columns}
-              dataSource={transfers}
-              rowKey="id"
-              pagination={{
-                pageSize: 8,
-                size: 'small',
-                showSizeChanger: false,
-                responsive: true,
-              }}
-              size="small"
-              scroll={{ x: 800 }}
-              responsive
-            />
-          </Card>
-        </Space>
-      </div>
+              <Button
+                title="Refresh"
+                type="text"
+                shape="circle"
+                icon={<SyncOutlined spin={dataLoading} />}
+                onClick={fetchContractData}
+                disabled={dataLoading}
+              />
+            </Space>
+          }
+        >
+          <Table
+            style={{ cursor: 'pointer' }}
+            columns={columns}
+            onRow={(record) => ({
+              onClick: () => handleViewTransfer(record),
+            })}
+            dataSource={transfers}
+            rowKey="id"
+            loading={dataLoading}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total, range) =>
+                `${range[0]}-${range[1]} of ${total} transfers`,
+            }}
+            scroll={{ x: 800 }}
+          />
+        </Card>
+      </Space>
 
       {/* New Transfer Modal */}
       <Modal
-        title="Schedule New Transfer"
+        title={
+          <Space>
+            <SendOutlined />
+            Schedule Transfer
+          </Space>
+        }
         open={transferModalOpen}
         onCancel={() => {
           setTransferModalOpen(false);
           form.resetFields();
-          setSelectedDateTime(null);
           setCalculatedPeriod(null);
         }}
         footer={null}
-        width={500}
+        width={600}
       >
+        <Divider />
         <Form
           form={form}
           onFinish={scheduleTransfer}
@@ -475,37 +500,32 @@ export default function App() {
           >
             <DatePicker
               showTime
+              showNow={false}
               placeholder="Select date and time"
               style={{ width: '100%' }}
               onChange={handleDateTimeChange}
               disabledDate={(current) =>
                 current && current.isBefore(dayjs(), 'day')
               }
-              disabledTime={() => ({
-                disabledHours: () => {
-                  const now = dayjs();
-                  const selected = selectedDateTime;
-                  if (selected && selected.isSame(now, 'day')) {
-                    return Array.from({ length: now.hour() }, (_, i) => i);
-                  }
-                  return [];
-                },
-                disabledMinutes: (selectedHour) => {
-                  const now = dayjs();
-                  const selected = selectedDateTime;
-                  if (
-                    selected &&
-                    selected.isSame(now, 'day') &&
+              disabledTime={(current) => {
+                if (!current || !current.isSame(dayjs(), 'day')) {
+                  return {}; // No restrictions for future dates
+                }
+                const now = dayjs();
+                return {
+                  disabledHours: () =>
+                    Array.from({ length: now.hour() }, (_, i) => i),
+                  disabledMinutes: (selectedHour) =>
                     selectedHour === now.hour()
-                  ) {
-                    return Array.from(
-                      { length: now.minute() + 1 },
-                      (_, i) => i,
-                    );
-                  }
-                  return [];
-                },
-              })}
+                      ? Array.from({ length: now.minute() }, (_, i) => i)
+                      : [],
+                  disabledSeconds: (selectedHour, selectedMinute) =>
+                    selectedHour === now.hour() &&
+                    selectedMinute === now.minute()
+                      ? Array.from({ length: now.second() }, (_, i) => i)
+                      : [],
+                };
+              }}
             />
           </Form.Item>
 
@@ -589,9 +609,11 @@ export default function App() {
       {/* Transfer Details Modal */}
       <Modal
         title={
-          <Text strong>
-            Transfer Details <Tag color="cyan">#{selectedTransfer?.id}</Tag>
-          </Text>
+          <Space>
+            <EyeOutlined />
+            Transfer Details
+            <Tag color="blue">#{selectedTransfer?.id}</Tag>
+          </Space>
         }
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
@@ -603,108 +625,113 @@ export default function App() {
         width={600}
       >
         {selectedTransfer && (
-          <Descriptions
-            bordered
-            column={1}
-            size="small"
-            items={[
-              {
-                key: 'transfer-id',
-                label: 'Transfer ID',
-                children: <Tag color="cyan">{selectedTransfer.id}</Tag>,
-              },
-              {
-                key: 'recipient',
-                label: 'Recipient Address',
-                children: (
+          <Space direction="vertical" size="large" style={{ width: '100%' }}>
+            <Row gutter={[16, 16]}>
+              <Col span={12}>
+                <Card size="small" title="Recipient">
                   <Text copyable style={{ fontFamily: 'monospace' }}>
                     {selectedTransfer.recipient}
                   </Text>
-                ),
-              },
-              {
-                key: 'sender',
-                label: 'Sender Address',
-                children: (
+                </Card>
+              </Col>
+              <Col span={12}>
+                <Card size="small" title="Sender">
                   <Text copyable style={{ fontFamily: 'monospace' }}>
                     {selectedTransfer.sender}
                   </Text>
-                ),
-              },
-              {
-                key: 'amount',
-                label: 'Amount (MAS)',
-                children: formatMas(selectedTransfer.amount),
-              },
-              {
-                key: 'scheduled-period',
-                label: 'Scheduled Period',
-                children: selectedTransfer.scheduledPeriod,
-              },
-              {
-                key: 'estimated-execution',
-                label: 'Estimated Execution Time',
-                children: selectedTransfer.executed
-                  ? 'Already executed'
-                  : (() => {
-                      const estimated = getEstimatedExecutionTime(
-                        selectedTransfer.scheduledPeriod,
-                      );
-                      if (estimated === 'Ready to execute') {
-                        return <Text type="warning">Ready to execute now</Text>;
-                      }
-                      return (
-                        <div>
-                          <Text>
-                            {estimated.format(
-                              'ddd, MMM D, YYYY [at] h:mm:ss A',
-                            )}
-                          </Text>
-                          <br />
-                          <Text type="secondary" style={{ fontSize: '12px' }}>
-                            (
-                            {Math.ceil(
-                              ((selectedTransfer.scheduledPeriod -
-                                currentPeriod) *
-                                MASSA_PERIOD_DURATION) /
-                                60,
-                            )}{' '}
-                            minutes from now)
-                          </Text>
-                        </div>
-                      );
-                    })(),
-              },
-              {
-                key: 'status',
-                label: 'Status',
-                children: selectedTransfer.executed ? (
-                  <Text type="success">Executed</Text>
-                ) : selectedTransfer.scheduledPeriod <= currentPeriod ? (
-                  <Text type="warning">Ready to Execute</Text>
-                ) : (
-                  <Text>Pending</Text>
-                ),
-              },
-              {
-                key: 'created-at',
-                label: 'Created At',
-                children: dayjs(selectedTransfer.createdAt).format(
-                  'ddd, MMM D, YYYY h:mm A',
-                ),
-              },
-              {
-                key: 'executed-at',
-                label: 'Executed At',
-                children:
-                  selectedTransfer.executedAt !== null
-                    ? dayjs(selectedTransfer.executedAt).format(
-                        'ddd, MMM D, YYYY [at] h:mm:ss A',
-                      )
-                    : 'Not executed yet',
-              },
-            ]}
-          />
+                </Card>
+              </Col>
+            </Row>
+
+            <Row gutter={[16, 16]}>
+              <Col span={8}>
+                <Card size="small" title="Amount">
+                  <Text strong style={{ fontSize: '16px' }}>
+                    {formatMas(selectedTransfer.amount)} MAS
+                  </Text>
+                </Card>
+              </Col>
+              <Col span={8}>
+                <Card size="small" title="Status">
+                  {selectedTransfer.executed ? (
+                    <Tag color="success">Executed</Tag>
+                  ) : selectedTransfer.scheduledPeriod <= currentPeriod ? (
+                    <Tag color="warning">Ready</Tag>
+                  ) : (
+                    <Tag color="processing">Pending</Tag>
+                  )}
+                </Card>
+              </Col>
+              <Col span={8}>
+                <Card size="small" title="Schedule">
+                  {selectedTransfer.executed ? (
+                    <Text strong>
+                      {selectedTransfer.executedAt
+                        ? dayjs(selectedTransfer.executedAt).format(
+                            'MMM D, YYYY h:mm:ss A',
+                          )
+                        : 'Unknown'}
+                    </Text>
+                  ) : (
+                    <Space direction="vertical" size="small">
+                      <Text
+                        strong
+                        style={{ fontSize: '12px', color: '#1890ff' }}
+                      >
+                        {(() => {
+                          const estimated = getEstimatedExecutionTime(
+                            selectedTransfer.scheduledPeriod,
+                          );
+                          return estimated === 'Ready to execute'
+                            ? 'Ready now'
+                            : estimated.format('MMM D, YYYY h:mm:ss A');
+                        })()}
+                      </Text>
+                      <Text type="secondary" style={{ fontSize: '12px' }}>
+                        {getTimeRemaining(selectedTransfer.scheduledPeriod)}
+                      </Text>
+                    </Space>
+                  )}
+                </Card>
+              </Col>
+            </Row>
+
+            <Card size="small" title="Timeline">
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <Flex justify="space-between">
+                  <Text type="secondary">Created:</Text>
+                  <Text>
+                    {dayjs(selectedTransfer.createdAt).format(
+                      'MMM D, YYYY h:mm A',
+                    )}
+                  </Text>
+                </Flex>
+                <Flex justify="space-between">
+                  <Text type="secondary">Scheduled Period:</Text>
+                  <Text>{selectedTransfer.scheduledPeriod}</Text>
+                </Flex>
+                <Flex justify="space-between">
+                  <Text type="secondary">Execution Time:</Text>
+                  <Text>
+                    {selectedTransfer.executed
+                      ? selectedTransfer.executedAt
+                        ? dayjs(selectedTransfer.executedAt).format(
+                            'MMM D, YYYY h:mm:ss A',
+                          )
+                        : 'Unknown'
+                      : (() => {
+                          const estimated = getEstimatedExecutionTime(
+                            selectedTransfer.scheduledPeriod,
+                          );
+                          return estimated === 'Ready to execute'
+                            ? 'Ready now'
+                            : estimated.format('MMM D, YYYY h:mm:ss A');
+                        })()}
+                  </Text>
+                </Flex>
+              </Space>
+            </Card>
+          </Space>
         )}
       </Modal>
     </div>
