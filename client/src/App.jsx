@@ -26,7 +26,6 @@ import {
   DollarOutlined,
   EyeOutlined,
   PlusOutlined,
-  CalendarOutlined,
   SyncOutlined,
 } from '@ant-design/icons';
 import {
@@ -36,6 +35,8 @@ import {
   parseMas,
   formatMas,
   Address,
+  U64,
+  bytesToStr,
 } from '@massalabs/massa-web3';
 import { MassaLogo } from '@massalabs/react-ui-kit';
 import dayjs from 'dayjs';
@@ -43,7 +44,6 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import { useWallet } from './hooks/useWallet';
 import './App.css';
 
-// Extend dayjs with relativeTime plugin
 dayjs.extend(relativeTime);
 
 const { Title, Text } = Typography;
@@ -184,32 +184,29 @@ export default function App() {
   const fetchContractData = async () => {
     setDataLoading(true);
     try {
-      // Get transfer count
-      const countResult = await contract.read('getTransferCount');
-      const count = parseInt(countResult.value);
-      setTransferCount(count);
+      const [transferCountResult, balanceResult, currentSlot] =
+        await Promise.all([
+          contract.read('getTransferCount'),
+          contract.read('getContractBalance'),
+          massaClient.client.getCurrentSlot(),
+        ]);
 
-      // Get contract balance
-      const balanceResult = await contract.read('getContractBalance');
-      const balanceArgs = new Args(balanceResult.value);
-      const balance = Number(balanceArgs.nextU64());
+      // Process results
+      const transferCount = U64.fromBytes(transferCountResult.value);
+      setTransferCount(transferCount);
+      const balance = U64.fromBytes(balanceResult.value);
       setContractBalance(balance);
-
-      // Get current period and timestamp
-      const currentSlot = await massaClient.client.getCurrentSlot();
-      console.log(typeof currentSlot.period);
       setCurrentPeriod(currentSlot.period);
 
       // Fetch transfers in desc order (newest first)
       const transfersData = [];
-      for (let i = count; i >= 1; i--) {
+      for (let i = transferCount; i >= 1; i--) {
         try {
           const transferResult = await contract.read(
             'getTransfer',
-            new Args().addU64(BigInt(i)),
+            new Args().addU64(i),
           );
-          const transferArgs = new Args(transferResult.value);
-          const transferDetails = transferArgs.nextString();
+          const transferDetails = bytesToStr(transferResult.value);
 
           if (transferDetails) {
             const parts = transferDetails.split('|');
@@ -218,12 +215,12 @@ export default function App() {
               transfersData.push({
                 id: i,
                 recipient: parts[0],
-                amount: parseInt(parts[1]),
-                scheduledPeriod: parseInt(parts[2]),
+                amount: parts[1],
+                scheduledPeriod: parts[2],
                 sender: parts[3],
                 executed: parts[4] === 'true',
-                createdAt: parseInt(parts[5]),
-                executedAt: parts[6] !== '0' ? parseInt(parts[6]) : null,
+                createdAt: parts[5],
+                executedAt: parts[6] !== '0' ? parts[6] : null,
               });
             }
           }
@@ -256,12 +253,11 @@ export default function App() {
 
       const provider = accounts[0];
       const amountInMas = parseMas(values.amount);
-      const scheduledPeriod = parseInt(values.scheduledPeriod);
+      const scheduledPeriod = U64.fromNumber(values.scheduledPeriod);
 
       const args = new Args()
         .addString(values.recipient)
-        .addU64(BigInt(scheduledPeriod))
-        .serialize();
+        .addU64(scheduledPeriod);
 
       const scheduleOp = await provider.callSC({
         func: 'scheduleTransfer',
