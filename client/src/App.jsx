@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   Card,
   Button,
@@ -24,16 +25,11 @@ import {
   PlusOutlined,
   CalendarOutlined,
 } from '@ant-design/icons';
-import {
-  SmartContract,
-  JsonRpcProvider,
-  Mas,
-  Args,
-} from '@massalabs/massa-web3';
-import { useEffect, useState } from 'react';
-import { useWallet } from './hooks/useWallet';
-import { MassaLogo, parseAmount } from '@massalabs/react-ui-kit';
+import { SmartContract, JsonRpcProvider, Args } from '@massalabs/massa-web3';
+import { parseMas, formatMas } from '@massalabs/massa-web3';
+import { MassaLogo } from '@massalabs/react-ui-kit';
 import dayjs from 'dayjs';
+import { useWallet } from './hooks/useWallet';
 import './App.css';
 
 const { Title, Text } = Typography;
@@ -188,7 +184,7 @@ export default function App() {
       }
 
       const provider = accounts[0];
-      const amountInMas = parseAmount(values.amount, 9);
+      const amountInMas = parseMas(values.amount);
       const scheduledPeriod = parseInt(values.scheduledPeriod);
 
       const args = new Args()
@@ -258,7 +254,7 @@ export default function App() {
       dataIndex: 'amount',
       key: 'amount',
       sorter: (a, b) => a.amount - b.amount,
-      render: (amount) => (amount / 1e9).toFixed(4),
+      render: (amount) => formatMas(amount),
       width: '12%',
     },
     {
@@ -375,7 +371,8 @@ export default function App() {
               />
               <Statistic
                 title="Balance"
-                value={(contractBalance / 1e9).toFixed(4)}
+                value={formatMas(contractBalance)}
+                precision={4}
                 prefix={<DollarOutlined />}
                 valueStyle={{ color: '#52c41a', fontWeight: 'bold' }}
                 suffix="MAS"
@@ -637,7 +634,7 @@ export default function App() {
               {
                 key: 'amount',
                 label: 'Amount (MAS)',
-                children: (selectedTransfer.amount / 1e9).toFixed(9),
+                children: formatMas(selectedTransfer.amount),
               },
               {
                 key: 'scheduled-period',

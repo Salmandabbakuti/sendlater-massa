@@ -1,10 +1,19 @@
-import { Button, message, Dropdown, Typography } from 'antd';
+import {
+  Button,
+  message,
+  Dropdown,
+  Typography,
+  Avatar,
+  Space,
+  Badge,
+} from 'antd';
 import {
   WalletOutlined,
   DisconnectOutlined,
   DownOutlined,
   CopyOutlined,
   CheckOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import { useWallet } from '../hooks/useWallet';
 
@@ -13,9 +22,9 @@ const { Text } = Typography;
 export default function ConnectWalletButton() {
   const {
     account,
-    connectedWallet,
     availableWallets,
     loading,
+    connectedWallet,
     connectWallet,
     disconnectWallet,
   } = useWallet();
@@ -37,41 +46,53 @@ export default function ConnectWalletButton() {
   // Connected wallet dropdown items
   const connectedDropdownItems = [
     {
-      key: 'address',
-      label: (
-        <div style={{ minWidth: 200 }}>
-          <Text type="secondary" style={{ fontSize: '12px' }}>
-            Address
-          </Text>
-          <br />
-          <Text
-            copyable={{
-              text: account,
-              onCopy: () => message.success('Address copied!'),
-              icon: [
-                <CopyOutlined key="copy-icon" />,
-                <CheckOutlined key="copied-icon" />,
-              ],
-            }}
-            style={{ fontFamily: 'monospace', fontSize: '13px' }}
-          >
-            {formatAddress(account)}
-          </Text>
-        </div>
-      ),
-      disabled: true,
-    },
-    {
       key: 'wallet-info',
       label: (
-        <div>
-          <Text type="secondary" style={{ fontSize: '12px' }}>
-            Connected to
-          </Text>
-          <br />
-          <Text style={{ fontSize: '13px' }}>
-            {connectedWallet?.name() || 'Unknown Wallet'}
-          </Text>
+        <div style={{ minWidth: 200, padding: '12px 0', textAlign: 'center' }}>
+          <Space direction="vertical" size={12} style={{ width: '100%' }}>
+            {/* Avatar with wallet badge */}
+            <Badge
+              count={
+                <WalletOutlined
+                  title={connectedWallet?.name() || '-'}
+                  style={{ color: '#1890ff', fontSize: '12px' }}
+                />
+              }
+              offset={[-8, 8]}
+            >
+              <Avatar
+                size={48}
+                icon={<UserOutlined />}
+                style={{ backgroundColor: '#f0f0f0', color: '#666' }}
+              />
+            </Badge>
+
+            {/* Address */}
+            <Text
+              copyable={{
+                text: account?.address,
+                onCopy: () => message.success('Address copied!'),
+                icon: [
+                  <CopyOutlined key="copy-icon" />,
+                  <CheckOutlined key="copied-icon" />,
+                ],
+              }}
+              style={{
+                fontFamily: 'monospace',
+                fontSize: '13px',
+                color: '#666',
+              }}
+            >
+              {formatAddress(account?.address)}
+            </Text>
+
+            {/* Balance */}
+            <Text
+              style={{ fontSize: '14px', fontWeight: '500', color: '#333' }}
+            >
+              {account?.balanceString || '0 MAS'}
+            </Text>
+          </Space>
         </div>
       ),
       disabled: true,
@@ -117,7 +138,7 @@ export default function ConnectWalletButton() {
               textOverflow: 'ellipsis',
             }}
           >
-            {formatAddress(account)}
+            {formatAddress(account?.address)}
           </span>
           <DownOutlined />
         </Button>
