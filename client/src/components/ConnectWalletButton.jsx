@@ -35,11 +35,41 @@ export default function ConnectWalletButton() {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
+  // Get wallet logo based on wallet name
+  const getWalletLogo = (walletName) => {
+    if (!walletName) return null;
+    const name = walletName.toLowerCase();
+
+    if (name.includes('metamask')) {
+      return '/metamask-logo.svg';
+    } else if (name.includes('massa')) {
+      return '/massa-wallet-logo.svg';
+    }
+    return null;
+  };
+
+  // Get wallet icon component for buttons/menus
+  const getWalletIcon = (walletName) => {
+    const logoPath = getWalletLogo(walletName);
+    if (logoPath) {
+      return (
+        <Avatar
+          size="small"
+          shape="square"
+          src={logoPath}
+          alt={walletName}
+          style={{ objectFit: 'contain' }}
+        />
+      );
+    }
+    return <WalletOutlined />;
+  };
+
   // Create dropdown menu items for multiple wallets
   const walletMenuItems = availableWallets.map((wallet, index) => ({
     key: index.toString(),
     label: wallet.name() || `Wallet ${index + 1}`,
-    icon: <WalletOutlined />,
+    icon: getWalletIcon(wallet.name()),
     onClick: () => connectWallet(index),
   }));
 
@@ -53,18 +83,21 @@ export default function ConnectWalletButton() {
             {/* Avatar with wallet badge */}
             <Badge
               count={
-                <WalletOutlined
-                  title={connectedWallet?.name() || '-'}
-                  style={{ color: '#1890ff', fontSize: '12px' }}
+                <Avatar
+                  size={20}
+                  src={getWalletLogo(connectedWallet?.name())}
+                  icon={<WalletOutlined />}
+                  style={{
+                    backgroundColor: 'white',
+                    border: '1px solid #d9d9d9',
+                    fontSize: '10px',
+                    color: '#1890ff',
+                  }}
                 />
               }
               offset={[-8, 8]}
             >
-              <Avatar
-                size={48}
-                icon={<UserOutlined />}
-                style={{ backgroundColor: '#f0f0f0', color: '#666' }}
-              />
+              <Avatar size={48} icon={<UserOutlined />} />
             </Badge>
 
             {/* Address */}
@@ -110,81 +143,60 @@ export default function ConnectWalletButton() {
   ];
 
   // Connected wallet button
-  if (account) {
-    return (
-      <Dropdown
-        menu={{ items: connectedDropdownItems }}
-        trigger={['click']}
-        placement="bottomRight"
-        overlayStyle={{ minWidth: 250 }}
-      >
-        <Button
-          type="primary"
-          shape="round"
-          size="large"
-          loading={loading}
-          icon={<WalletOutlined />}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            marginRight: '16px',
-          }}
-        >
-          <span
-            style={{
-              maxWidth: '120px',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {formatAddress(account?.address)}
-          </span>
-          <DownOutlined />
-        </Button>
-      </Dropdown>
-    );
-  }
-
-  // Multiple wallets dropdown
-  if (availableWallets.length > 1) {
-    return (
-      <Dropdown
-        menu={{ items: walletMenuItems }}
-        trigger={['click']}
-        placement="bottomRight"
-        disabled={loading}
-      >
-        <Button
-          type="primary"
-          shape="round"
-          size="large"
-          loading={loading}
-          icon={<WalletOutlined />}
-          style={{ marginRight: '16px' }}
-        >
-          Connect Wallet <DownOutlined />
-        </Button>
-      </Dropdown>
-    );
-  }
-
-  // Single wallet or no wallets
   return (
-    <Button
-      type="primary"
-      shape="round"
-      size="large"
-      loading={loading}
-      icon={<WalletOutlined />}
-      onClick={() => connectWallet(0)}
-      style={{ marginRight: '16px' }}
+    <Dropdown
+      menu={{
+        items: account ? connectedDropdownItems : walletMenuItems,
+      }}
+      trigger={['click']}
+      placement="bottomRight"
+      overlayStyle={{ minWidth: account ? 250 : 'auto' }}
     >
-      {loading
-        ? 'Connecting...'
-        : availableWallets.length === 0
-        ? 'No Wallets Found'
-        : 'Connect Wallet'}
-    </Button>
+      <Button
+        type="primary"
+        shape="round"
+        size="large"
+        loading={loading}
+        icon={
+          account ? getWalletIcon(connectedWallet?.name()) : <WalletOutlined />
+        }
+        onClick={
+          !account && availableWallets.length <= 1
+            ? () => connectWallet(0)
+            : undefined
+        }
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          marginRight: '16px',
+        }}
+      >
+        {account ? (
+          <>
+            <span
+              style={{
+                maxWidth: '120px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {formatAddress(account?.address)}
+            </span>
+            <DownOutlined />
+          </>
+        ) : availableWallets.length > 1 ? (
+          <>
+            Connect Wallet <DownOutlined />
+          </>
+        ) : loading ? (
+          'Connecting...'
+        ) : availableWallets.length === 0 ? (
+          'No Wallets Found'
+        ) : (
+          'Connect Wallet'
+        )}
+      </Button>
+    </Dropdown>
   );
 }
