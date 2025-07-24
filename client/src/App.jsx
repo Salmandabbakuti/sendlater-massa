@@ -35,6 +35,7 @@ import {
   Args,
   parseMas,
   formatMas,
+  Address,
 } from '@massalabs/massa-web3';
 import { MassaLogo } from '@massalabs/react-ui-kit';
 import dayjs from 'dayjs';
@@ -69,6 +70,55 @@ export default function App() {
   // Constants for Massa network timing
   const MASSA_PERIOD_DURATION = 16; // seconds per period
   const PERIOD_BUFFER = 2; // buffer periods for safety
+
+  // Form validation functions
+  const validateRecipientAddress = async (_, value) => {
+    if (!value) {
+      return Promise.reject('Please enter recipient address');
+    }
+    try {
+      Address.fromString(value);
+      return Promise.resolve();
+    } catch (error) {
+      return Promise.reject(error?.message || 'Invalid address format');
+    }
+  };
+
+  const validateAmount = async (_, value) => {
+    if (!value) {
+      return Promise.reject('Please enter amount');
+    }
+
+    const numValue = parseFloat(value);
+    if (isNaN(numValue) || numValue < 0.001) {
+      return Promise.reject('Amount must be at least 0.001 MAS');
+    }
+
+    try {
+      const balance = await account?.balance(true);
+      if (parseMas(value) > balance) {
+        return Promise.reject('Insufficient balance in connected wallet');
+      }
+      return Promise.resolve();
+    } catch {
+      return Promise.reject('Invalid balance');
+    }
+  };
+
+  const validateScheduledPeriod = (_, value) => {
+    if (!value) {
+      return Promise.reject('Please enter a scheduled period');
+    }
+
+    const numValue = parseInt(value);
+    if (isNaN(numValue) || numValue <= currentPeriod) {
+      return Promise.reject(
+        `Scheduled Period must be greater than ${currentPeriod}`,
+      );
+    }
+
+    return Promise.resolve();
+  };
 
   // Calculate estimated execution time from period
   const getEstimatedExecutionTime = (scheduledPeriod) => {
@@ -464,6 +514,7 @@ export default function App() {
         <Divider />
         <Form
           form={form}
+          size="large"
           onFinish={scheduleTransfer}
           layout="vertical"
           style={{ marginTop: 16 }}
@@ -473,38 +524,36 @@ export default function App() {
               name="recipient"
               label="Recipient Address"
               hasFeedback
-              rules={[
-                { required: true, message: 'Enter recipient address' },
-                // {
-                //   pattern: /^A[SU][A-Za-z0-9]{49}$/,
-                //   message: 'Invalid Massa address (must start with AS or AU)',
-                // },
-              ]}
+              rules={[{ validator: validateRecipientAddress }]}
             >
-              <Input placeholder="Recipient Address (AS1... or AU1...)" />
+              <Input
+                placeholder="Recipient Address (AS1... or AU1...)"
+                allowClear
+              />
             </Form.Item>
 
             <Form.Item
               name="amount"
-              label="Amount (MAS)"
-              rules={[
-                { required: true, message: 'Enter amount' },
-                // {
-                //   type: 'number',
-                //   min: 0.000000001,
-                //   message: 'Amount must be > 0',
-                // },
-              ]}
+              hasFeedback
+              label={
+                <Space>
+                  Amount (MAS)
+                  {account?.balanceString && (
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      (Balance: {account.balanceString})
+                    </Text>
+                  )}
+                </Space>
+              }
+              rules={[{ validator: validateAmount }]}
             >
               <Input type="number" step="0.001" placeholder="Amount (MAS)" />
             </Form.Item>
 
-            <Form.Item
-              label="Execution Time"
-              help="Select when you want the transfer to be executed"
-            >
+            <Form.Item label="Execution Time">
               <DatePicker
                 showTime
+                allowClear
                 showNow={false}
                 placeholder="Select date and time"
                 style={{ width: '100%' }}
@@ -537,6 +586,7 @@ export default function App() {
             {calculatedPeriod && (
               <Alert
                 type="info"
+                showIcon
                 style={{ marginBottom: 16 }}
                 message="Period Calculation"
                 description={
@@ -557,9 +607,9 @@ export default function App() {
                     </p>
                     <p style={{ fontSize: '12px', color: '#666' }}>
                       <em>
-                        Note: Execution time may vary by ±
-                        {PERIOD_BUFFER * MASSA_PERIOD_DURATION}s due to network
-                        timing
+                        Note: Execution time may vary by ±{' '}
+                        {PERIOD_BUFFER * MASSA_PERIOD_DURATION} sec due to
+                        network timing
                       </em>
                     </p>
                   </div>
@@ -571,25 +621,10 @@ export default function App() {
               name="scheduledPeriod"
               label="Scheduled Period (Advanced)"
               hasFeedback
-              validateFirst
-              help={`Current period: ${currentPeriod}. Each period = ${MASSA_PERIOD_DURATION}s. You can manually override the calculated period.`}
-              rules={[
-                {
-                  required: true,
-                  message: 'Select a time or enter period manually',
-                },
-                // {
-                //   type: 'number',
-                //   min: currentPeriod + 1,
-                //   message: `Must be > ${currentPeriod}`,
-                // },
-              ]}
+              extra={`Current period: ${currentPeriod}. Each period = ${MASSA_PERIOD_DURATION}s. You can manually override the calculated period.`}
+              rules={[{ validator: validateScheduledPeriod }]}
             >
-              <Input
-                type="number"
-                placeholder={`Period (>${currentPeriod})`}
-                suffix={<CalendarOutlined />}
-              />
+              <Input type="number" placeholder={`Period (>${currentPeriod})`} />
             </Form.Item>
 
             <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
@@ -779,8 +814,8 @@ export default function App() {
                 >
                   <Text type="secondary" style={{ fontSize: '12px' }}>
                     <em>
-                      Note: Execution time may vary by ±
-                      {PERIOD_BUFFER * MASSA_PERIOD_DURATION}s due to network
+                      Note: Execution time may vary by ±{' '}
+                      {PERIOD_BUFFER * MASSA_PERIOD_DURATION} sec due to network
                       timing
                     </em>
                   </Text>
