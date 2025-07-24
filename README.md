@@ -2,6 +2,8 @@
 
 SendLater is a revolutionary DeFi application that brings scheduling capabilities to cryptocurrency transfers on the Massa blockchain. Whether you want to make recurring payments, implement vesting schedules, or simply schedule a transfer, SendLater provides a secure and user-friendly solution. Set it and forget it - your transfers will execute automatically at the specified time.
 
+![Main Dashboard](https://github.com/user-attachments/assets/649384ef-8e5f-42a3-8ed8-cd10d10e8e47)
+
 ## 📋 Table of Contents
 
 - [Overview](#overview)
@@ -76,7 +78,10 @@ While currently focused on basic transfer scheduling, SendLater is headed toward
 ![Main Dashboard](https://github.com/user-attachments/assets/649384ef-8e5f-42a3-8ed8-cd10d10e8e47)
 
 ### Transfer Details
-![Transfer Details](https://github.com/user-attachments/assets/6a8538f4-101c-47c7-87f1-a43631eaf7ac)
+![Transfer Details](https://github.com/user-attachments/assets/eb82eec2-0980-4dc9-aa68-0971adeb2223)
+
+### Transfer Details - Pending
+![Transfer Details - Pending](https://github.com/user-attachments/assets/c4b95308-1008-47b3-8b3c-1b1a8fa0d009)
 
 ### Schedule Transfer
 ![Schedule Transfer](https://github.com/user-attachments/assets/52ac59b5-b358-4914-9ee5-40297504c08f)
@@ -273,13 +278,23 @@ To assign a MNS to your website navigate to [Massa Name Service](https://mns.mas
 
 ## 📝 Changelog
 
+### V0.1.0
+- Initial release with core features
+- Basic transfer scheduling
+- Transfers List and Details
+- Automatic execution of scheduled transfers
+- Frontend interface with wallet integration
+- Realtime transfer status updates
+- Added transfer details page
+
 ## 🗺️ Roadmap
 
 ### Phase 1: Core Features (✅ Completed)
 - [x] Basic transfer scheduling
-- [x] Automatic execution
-- [x] Web interface
-- [x] Wallet integration
+- [x] Transfers List and Details
+- [x] Automatic execution of scheduled transfers
+- [x] Frontend interface with wallet integration
+- [x] Realtime transfer status updates
 
 ### Phase 2: TBD
 
