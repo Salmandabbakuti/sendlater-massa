@@ -219,8 +219,8 @@ export default function App() {
                 scheduledPeriod: parts[2],
                 sender: parts[3],
                 executed: parts[4] === 'true',
-                createdAt: parts[5],
-                executedAt: parts[6] !== '0' ? parts[6] : null,
+                createdAt: Number(parts[5]),
+                executedAt: parts[6] !== '0' ? Number(parts[6]) : null,
               });
             }
           }
@@ -296,7 +296,7 @@ export default function App() {
     {
       title: 'ID',
       dataIndex: 'id',
-      sorter: (a, b) => a.id - b.id,
+      sorter: (a, b) => Number(a.id) - Number(b.id),
       render: (id) => <Tag color="blue">#{id}</Tag>,
     },
     {
@@ -316,7 +316,7 @@ export default function App() {
       title: 'Amount',
       dataIndex: 'amount',
       render: (amount) => <Text strong>{formatMas(amount)} MAS</Text>,
-      sorter: (a, b) => a.amount - b.amount,
+      sorter: (a, b) => Number(a.amount) - Number(b.amount),
     },
     {
       title: 'Period',
@@ -324,7 +324,7 @@ export default function App() {
       render: (period) => (
         <Text style={{ fontFamily: 'monospace' }}>{period}</Text>
       ),
-      sorter: (a, b) => a.scheduledPeriod - b.scheduledPeriod,
+      sorter: (a, b) => Number(a.scheduledPeriod) - Number(b.scheduledPeriod),
     },
     {
       title: 'Status',
@@ -332,7 +332,7 @@ export default function App() {
       render: (_, record) => {
         if (record.executed) {
           return <Tag color="success">Executed</Tag>;
-        } else if (record.scheduledPeriod <= currentPeriod) {
+        } else if (Number(record.scheduledPeriod) <= currentPeriod) {
           return <Tag color="warning">Ready</Tag>;
         } else {
           return <Tag color="processing">Pending</Tag>;
@@ -346,7 +346,7 @@ export default function App() {
       render: (_, record) => {
         if (record.executed) {
           return record.executedAt ? (
-            dayjs(record.executedAt).format('MMM D, h:mm:ss A')
+            dayjs(record.executedAt).format('MMM D, YYYY h:mm:ss A')
           ) : (
             <Text type="secondary">-</Text>
           );
@@ -365,7 +365,7 @@ export default function App() {
         return (
           <Space direction="vertical" size={0}>
             <Text style={{ fontSize: '12px' }}>
-              {estimated.format('MMM D, h:mm:ss A')}
+              {estimated.format('MMM D, YYYY h:mm:ss A')}
             </Text>
             <Text type="secondary" style={{ fontSize: '11px' }}>
               {timeRemaining}
@@ -510,7 +510,6 @@ export default function App() {
         <Divider />
         <Form
           form={form}
-          size="large"
           onFinish={scheduleTransfer}
           layout="vertical"
           style={{ marginTop: 16 }}
