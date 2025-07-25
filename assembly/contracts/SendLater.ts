@@ -12,8 +12,9 @@ import {
   stringToBytes,
   u64ToBytes,
   bytesToU64,
-  bytesToString,
   Args,
+  Serializable,
+  Result,
 } from '@massalabs/as-types';
 
 // Constants for asyncCall gas and fee
@@ -24,10 +25,60 @@ const ASYNC_CALL_FEE: u64 = 1;
 const TRANSFER_COUNT_KEY = stringToBytes('transfer_count');
 
 /**
+ * Transfer class that implements Serializable interface
+ * Represents a scheduled transfer with all its properties
+ */
+export class Transfer implements Serializable {
+  constructor(
+    public id: u64 = 0,
+    public recipient: string = '',
+    public amount: u64 = 0,
+    public scheduledPeriod: u64 = 0,
+    public sender: string = '',
+    public executed: bool = false,
+    public createdAt: u64 = 0,
+    public executedAt: u64 = 0,
+  ) {}
+
+  // Serialize transfer data to bytes for storage
+  serialize(): StaticArray<u8> {
+    return new Args()
+      .add(this.id)
+      .add(this.recipient)
+      .add(this.amount)
+      .add(this.scheduledPeriod)
+      .add(this.sender)
+      .add(this.executed)
+      .add(this.createdAt)
+      .add(this.executedAt)
+      .serialize();
+  }
+
+  // Deserialize transfer data from bytes
+  deserialize(data: StaticArray<u8>, offset: i32): Result<i32> {
+    const args = new Args(data, offset);
+    this.id = args.nextU64().expect("Can't deserialize id.");
+    this.recipient = args.nextString().expect("Can't deserialize recipient.");
+    this.amount = args.nextU64().expect("Can't deserialize amount.");
+    this.scheduledPeriod = args
+      .nextU64()
+      .expect("Can't deserialize scheduledPeriod.");
+    this.sender = args.nextString().expect("Can't deserialize sender.");
+    this.executed = args.nextBool().expect("Can't deserialize executed.");
+    this.createdAt = args.nextU64().expect("Can't deserialize createdAt.");
+    this.executedAt = args.nextU64().expect("Can't deserialize executedAt.");
+    return new Result(args.offset);
+  }
+}
+
+/**
  * Constructor - Initialize the contract
  */
 export function constructor(): void {
-  if (!Context.isDeployingContract()) return;
+  assert(
+    Context.isDeployingContract(),
+    'Constructor can only be called during deployment',
+  );
   Storage.set(TRANSFER_COUNT_KEY, u64ToBytes(0));
   generateEvent('ScheduledTransfer contract initialized');
 }
@@ -62,11 +113,21 @@ export function scheduleTransfer(binaryArgs: StaticArray<u8>): void {
   const transferId = currentCount + 1;
   const createdAt = Context.timestamp();
 
-  // Store the scheduled transfer with timestamps
-  // Format: recipient|amount|scheduledPeriod|sender|executed|createdAt|executedAt
-  const transferData = `${recipient}|${amount}|${scheduledPeriod}|${sender}|false|${createdAt}|0`;
+  // Create the Transfer object
+  const transfer = new Transfer(
+    transferId,
+    recipient,
+    amount,
+    scheduledPeriod,
+    sender,
+    false,
+    createdAt,
+    0,
+  );
+
+  // Store the serialized transfer
   const transferKey = stringToBytes(`transfer_${transferId}`);
-  Storage.set(transferKey, stringToBytes(transferData));
+  Storage.set(transferKey, transfer.serialize());
 
   // Update transfer count
   Storage.set(TRANSFER_COUNT_KEY, u64ToBytes(transferId));
@@ -106,29 +167,30 @@ export function executeTransfer(binaryArgs: StaticArray<u8>): void {
     return;
   }
 
-  const transferData = bytesToString(Storage.get(transferKey));
-  const parts = transferData.split('|');
-  const recipient = parts[0];
-  const amount = u64(parseInt(parts[1]));
-  const executed = parts[4] === 'true';
+  // Deserialize the transfer object
+  const transferData = Storage.get(transferKey);
+  const transfer = new Transfer();
+  transfer.deserialize(transferData, 0);
 
-  if (executed) {
+  if (transfer.executed) {
     generateEvent(`Error: Transfer ${transferId} already executed`);
     return;
   }
 
   // Execute the transfer
-  const recipientAddress = new Address(recipient);
-  transferCoins(recipientAddress, amount);
+  const recipientAddress = new Address(transfer.recipient);
+  transferCoins(recipientAddress, transfer.amount);
 
   // Mark as executed with execution timestamp
-  const executedAt = Context.timestamp();
-  const updatedData = `${parts[0]}|${parts[1]}|${parts[2]}|${parts[3]}|true|${parts[5]}|${executedAt}`;
-  Storage.set(transferKey, stringToBytes(updatedData));
+  transfer.executed = true;
+  transfer.executedAt = Context.timestamp();
+
+  // Store the updated transfer
+  Storage.set(transferKey, transfer.serialize());
 
   generateEvent(
-    `Transfer executed: ID ${transferId}, Amount: ${amount} ` +
-      `sent to ${recipient}, Executed: ${executedAt}`,
+    `Transfer executed: ID ${transferId}, Amount: ${transfer.amount} ` +
+      `sent to ${transfer.recipient}, Executed: ${transfer.executedAt}`,
   );
 }
 

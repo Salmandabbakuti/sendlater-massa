@@ -28,30 +28,22 @@ import {
   PlusOutlined,
   SyncOutlined,
 } from '@ant-design/icons';
-import {
-  SmartContract,
-  JsonRpcProvider,
-  Args,
-  parseMas,
-  formatMas,
-  Address,
-  U64,
-  bytesToStr,
-} from '@massalabs/massa-web3';
+import { Args, parseMas, formatMas, Address, U64 } from '@massalabs/massa-web3';
 import { MassaLogo } from '@massalabs/react-ui-kit';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { useWallet } from './hooks/useWallet';
+import { Transfer, massaProvider, contract } from './utils';
+import {
+  MASSA_PERIOD_DURATION,
+  PERIOD_BUFFER,
+  CONTRACT_ADDRESS,
+} from './utils/constants';
 import './App.css';
 
 dayjs.extend(relativeTime);
 
 const { Title, Text } = Typography;
-
-const CONTRACT_ADDRESS = 'AS17YtGELtp2ug9VTAU8GLPzPHAtHzgdFty4CSwDgChBqQPDqVi3';
-
-const massaClient = JsonRpcProvider.buildnet();
-const contract = new SmartContract(massaClient, CONTRACT_ADDRESS);
 
 export default function App() {
   const { connectedWallet, account } = useWallet();
@@ -62,14 +54,11 @@ export default function App() {
   const [contractBalance, setContractBalance] = useState(0);
   const [currentPeriod, setCurrentPeriod] = useState(0);
   const [form] = Form.useForm();
-  const [modalVisible, setModalVisible] = useState(false);
+  const [transferDetailsModalOpen, setTransferDetailsModalOpen] =
+    useState(false);
   const [selectedTransfer, setSelectedTransfer] = useState(null);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [calculatedPeriod, setCalculatedPeriod] = useState(null);
-
-  // Constants for Massa network timing
-  const MASSA_PERIOD_DURATION = 16; // seconds per period
-  const PERIOD_BUFFER = 2; // buffer periods for safety
 
   // Form validation functions
   const validateRecipientAddress = async (_, value) => {
@@ -142,7 +131,9 @@ export default function App() {
     const executionTime = dayjs().add(secondsUntilExecution, 'seconds');
 
     return executionTime.fromNow(); // This gives us "in 2 hours", "in 30 minutes", etc.
-  }; // Calculate target period from selected timestamp
+  };
+
+  // Calculate target period from selected timestamp
   const calculatePeriodFromTimestamp = (targetTimestamp) => {
     const now = dayjs();
     const target = dayjs(targetTimestamp);
@@ -188,7 +179,7 @@ export default function App() {
         await Promise.all([
           contract.read('getTransferCount'),
           contract.read('getContractBalance'),
-          massaClient.client.getCurrentSlot(),
+          massaProvider.client.getCurrentSlot(),
         ]);
 
       // Process results
@@ -206,23 +197,14 @@ export default function App() {
             'getTransfer',
             new Args().addU64(i),
           );
-          const transferDetails = bytesToStr(transferResult.value);
 
-          if (transferDetails) {
-            const parts = transferDetails.split('|');
-            if (parts.length >= 7) {
-              // Updated to expect 7 parts with timestamps
-              transfersData.push({
-                id: i,
-                recipient: parts[0],
-                amount: parts[1],
-                scheduledPeriod: parts[2],
-                sender: parts[3],
-                executed: parts[4] === 'true',
-                createdAt: Number(parts[5]),
-                executedAt: parts[6] !== '0' ? Number(parts[6]) : null,
-              });
-            }
+          // Check if transfer data exists
+          if (transferResult.value && transferResult.value.length > 0) {
+            // Deserialize the transfer object
+            const transfer = Transfer.fromBytes(transferResult.value);
+            const transferObj = transfer.toObject();
+
+            transfersData.push(transferObj);
           }
         } catch (error) {
           console.log(`Error fetching transfer ${i}:`, error);
@@ -231,13 +213,13 @@ export default function App() {
       setTransfers(transfersData);
     } catch (error) {
       console.error('Error fetching contract data:', error);
-      message.error('Failed to fetch contract data');
+      message.error('Failed to fetch contract data. Please try again later.');
     } finally {
       setDataLoading(false);
     }
   };
 
-  const scheduleTransfer = async (values) => {
+  const handleScheduleTransfer = async (values) => {
     setLoading(true);
     try {
       if (!connectedWallet || !account) {
@@ -289,14 +271,14 @@ export default function App() {
 
   const handleViewTransfer = (transfer) => {
     setSelectedTransfer(transfer);
-    setModalVisible(true);
+    setTransferDetailsModalOpen(true);
   };
 
   const columns = [
     {
       title: 'ID',
       dataIndex: 'id',
-      sorter: (a, b) => Number(a.id) - Number(b.id),
+      sorter: (a, b) => a.id - b.id,
       render: (id) => <Tag color="blue">#{id}</Tag>,
     },
     {
@@ -316,7 +298,7 @@ export default function App() {
       title: 'Amount',
       dataIndex: 'amount',
       render: (amount) => <Text strong>{formatMas(amount)} MAS</Text>,
-      sorter: (a, b) => Number(a.amount) - Number(b.amount),
+      sorter: (a, b) => a.amount - b.amount,
     },
     {
       title: 'Period',
@@ -324,7 +306,7 @@ export default function App() {
       render: (period) => (
         <Text style={{ fontFamily: 'monospace' }}>{period}</Text>
       ),
-      sorter: (a, b) => Number(a.scheduledPeriod) - Number(b.scheduledPeriod),
+      sorter: (a, b) => a.scheduledPeriod - b.scheduledPeriod,
     },
     {
       title: 'Status',
@@ -510,7 +492,7 @@ export default function App() {
         <Divider />
         <Form
           form={form}
-          onFinish={scheduleTransfer}
+          onFinish={handleScheduleTransfer}
           layout="vertical"
           style={{ marginTop: 16 }}
         >
@@ -653,10 +635,13 @@ export default function App() {
             <Tag color="blue">#{selectedTransfer?.id}</Tag>
           </Space>
         }
-        open={modalVisible}
-        onCancel={() => setModalVisible(false)}
+        open={transferDetailsModalOpen}
+        onCancel={() => setTransferDetailsModalOpen(false)}
         footer={[
-          <Button key="close" onClick={() => setModalVisible(false)}>
+          <Button
+            key="close"
+            onClick={() => setTransferDetailsModalOpen(false)}
+          >
             Close
           </Button>,
         ]}

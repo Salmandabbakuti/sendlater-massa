@@ -278,7 +278,7 @@ To assign a MNS to your website navigate to [Massa Name Service](https://mns.mas
 
 | Network | Contract Address | Explorer Link |
 |---------|------------------|---------------|
-| Massa Testnet | `AS17YtGELtp2ug9VTAU8GLPzPHAtHzgdFty4CSwDgChBqQPDqVi3` | [View on Explorer](https://test.massa.net) |
+| Massa Testnet | `AS1JwGjhqt1s3VWk8VsQ92TG84Mne8MM2YXUS2zAQ1crYGkoyCBf` | [View on Explorer](https://buildnet-explorer.massa.net/#explorer?explore=AS1JwGjhqt1s3VWk8VsQ92TG84Mne8MM2YXUS2zAQ1crYGkoyCBf) |
 | Massa Mainnet | Coming Soon | - |
 
 ### Frontend Deployments
