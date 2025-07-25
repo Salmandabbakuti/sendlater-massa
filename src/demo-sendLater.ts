@@ -6,14 +6,12 @@ import {
   SmartContract,
   JsonRpcProvider,
   U64,
-  bytesToStr,
 } from '@massalabs/massa-web3';
+import { Transfer } from './Transfer.js';
 
 const account = await Account.fromEnv();
 const provider = JsonRpcProvider.buildnet(account);
-
-// Try to read contract address from config file
-let CONTRACT_ADDRESS = 'AS16qBxzJqWotMjUZQuCg3kt34ttqSqGPd6oqPRuUtbD9ohGEQMw'; // Fallback address
+const CONTRACT_ADDRESS = 'AS1JwGjhqt1s3VWk8VsQ92TG84Mne8MM2YXUS2zAQ1crYGkoyCBf';
 
 const contract = new SmartContract(provider, CONTRACT_ADDRESS);
 
@@ -63,12 +61,20 @@ try {
   const transferCount = U64.fromBytes(transferCountResult.value);
   console.log('Total transfers:', transferCount.toString());
 
-  // Get details of last transfer
+  // Get details of last transfer using Transfer class
   const getTransferArgs = new Args().addU64(transferCount); // Get last transfer (ID = transferCount)
   const transferResult = await contract.read('getTransfer', getTransferArgs);
-  // The transfer details are returned as a string, so we can use bytesToStr
-  const transferDetails = bytesToStr(transferResult.value);
-  console.log('Last transfer details:', transferDetails);
+
+  if (transferResult.value && transferResult.value.length > 0) {
+    // Deserialize the transfer using our Transfer class
+    const transfer = Transfer.fromBytes(transferResult.value);
+    const transferObj = transfer.toObject();
+
+    console.log('\n📋 Last Transfer Details:');
+    console.table(transferObj);
+  } else {
+    console.log('❌ No transfer data found');
+  }
 
   console.log('\n🎉 Demo completed successfully!');
   console.log(

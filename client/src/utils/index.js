@@ -1,4 +1,9 @@
 import { Args } from '@massalabs/massa-web3';
+import { SmartContract, JsonRpcPublicProvider } from '@massalabs/massa-web3';
+import { CONTRACT_ADDRESS } from './constants';
+
+export const massaProvider = JsonRpcPublicProvider.buildnet();
+export const contract = new SmartContract(massaProvider, CONTRACT_ADDRESS);
 
 /**
  * Transfer class for client-side serialization/deserialization
@@ -6,6 +11,7 @@ import { Args } from '@massalabs/massa-web3';
  */
 export class Transfer {
   constructor(
+    id = 0n,
     recipient = '',
     amount = 0n,
     scheduledPeriod = 0n,
@@ -14,6 +20,7 @@ export class Transfer {
     createdAt = 0n,
     executedAt = 0n,
   ) {
+    this.id = id;
     this.recipient = recipient;
     this.amount = amount;
     this.scheduledPeriod = scheduledPeriod;
@@ -25,6 +32,7 @@ export class Transfer {
 
   serialize() {
     const data = new Args()
+      .addU64(this.id)
       .addString(this.recipient)
       .addU64(this.amount)
       .addU64(this.scheduledPeriod)
@@ -38,7 +46,7 @@ export class Transfer {
 
   deserialize(data, offset) {
     const args = new Args(data, offset);
-
+    this.id = args.nextU64();
     this.recipient = args.nextString();
     this.amount = args.nextU64();
     this.scheduledPeriod = args.nextU64();
@@ -64,6 +72,7 @@ export class Transfer {
    */
   toObject() {
     return {
+      id: Number(this.id),
       recipient: this.recipient,
       amount: Number(this.amount),
       scheduledPeriod: Number(this.scheduledPeriod),

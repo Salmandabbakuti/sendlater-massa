@@ -30,6 +30,7 @@ const TRANSFER_COUNT_KEY = stringToBytes('transfer_count');
  */
 export class Transfer implements Serializable {
   constructor(
+    public id: u64 = 0,
     public recipient: string = '',
     public amount: u64 = 0,
     public scheduledPeriod: u64 = 0,
@@ -42,6 +43,7 @@ export class Transfer implements Serializable {
   // Serialize transfer data to bytes for storage
   serialize(): StaticArray<u8> {
     return new Args()
+      .add(this.id)
       .add(this.recipient)
       .add(this.amount)
       .add(this.scheduledPeriod)
@@ -55,6 +57,7 @@ export class Transfer implements Serializable {
   // Deserialize transfer data from bytes
   deserialize(data: StaticArray<u8>, offset: i32): Result<i32> {
     const args = new Args(data, offset);
+    this.id = args.nextU64().expect("Can't deserialize id.");
     this.recipient = args.nextString().expect("Can't deserialize recipient.");
     this.amount = args.nextU64().expect("Can't deserialize amount.");
     this.scheduledPeriod = args
@@ -112,6 +115,7 @@ export function scheduleTransfer(binaryArgs: StaticArray<u8>): void {
 
   // Create the Transfer object
   const transfer = new Transfer(
+    transferId,
     recipient,
     amount,
     scheduledPeriod,

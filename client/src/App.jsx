@@ -28,30 +28,22 @@ import {
   PlusOutlined,
   SyncOutlined,
 } from '@ant-design/icons';
-import {
-  SmartContract,
-  JsonRpcProvider,
-  Args,
-  parseMas,
-  formatMas,
-  Address,
-  U64,
-} from '@massalabs/massa-web3';
+import { Args, parseMas, formatMas, Address, U64 } from '@massalabs/massa-web3';
 import { MassaLogo } from '@massalabs/react-ui-kit';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { useWallet } from './hooks/useWallet';
-import { Transfer } from './types/Transfer';
+import { Transfer, massaProvider, contract } from './utils';
+import {
+  MASSA_PERIOD_DURATION,
+  PERIOD_BUFFER,
+  CONTRACT_ADDRESS,
+} from './utils/constants';
 import './App.css';
 
 dayjs.extend(relativeTime);
 
 const { Title, Text } = Typography;
-
-const CONTRACT_ADDRESS = 'AS16qBxzJqWotMjUZQuCg3kt34ttqSqGPd6oqPRuUtbD9ohGEQMw';
-
-const massaClient = JsonRpcProvider.buildnet();
-const contract = new SmartContract(massaClient, CONTRACT_ADDRESS);
 
 export default function App() {
   const { connectedWallet, account } = useWallet();
@@ -62,14 +54,11 @@ export default function App() {
   const [contractBalance, setContractBalance] = useState(0);
   const [currentPeriod, setCurrentPeriod] = useState(0);
   const [form] = Form.useForm();
-  const [modalVisible, setModalVisible] = useState(false);
+  const [transferDetailsModalOpen, setTransferDetailsModalOpen] =
+    useState(false);
   const [selectedTransfer, setSelectedTransfer] = useState(null);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [calculatedPeriod, setCalculatedPeriod] = useState(null);
-
-  // Constants for Massa network timing
-  const MASSA_PERIOD_DURATION = 16; // seconds per period
-  const PERIOD_BUFFER = 2; // buffer periods for safety
 
   // Form validation functions
   const validateRecipientAddress = async (_, value) => {
@@ -142,7 +131,9 @@ export default function App() {
     const executionTime = dayjs().add(secondsUntilExecution, 'seconds');
 
     return executionTime.fromNow(); // This gives us "in 2 hours", "in 30 minutes", etc.
-  }; // Calculate target period from selected timestamp
+  };
+
+  // Calculate target period from selected timestamp
   const calculatePeriodFromTimestamp = (targetTimestamp) => {
     const now = dayjs();
     const target = dayjs(targetTimestamp);
@@ -188,7 +179,7 @@ export default function App() {
         await Promise.all([
           contract.read('getTransferCount'),
           contract.read('getContractBalance'),
-          massaClient.client.getCurrentSlot(),
+          massaProvider.client.getCurrentSlot(),
         ]);
 
       // Process results
@@ -213,10 +204,7 @@ export default function App() {
             const transfer = Transfer.fromBytes(transferResult.value);
             const transferObj = transfer.toObject();
 
-            transfersData.push({
-              id: Number(i),
-              ...transferObj,
-            });
+            transfersData.push(transferObj);
           }
         } catch (error) {
           console.log(`Error fetching transfer ${i}:`, error);
@@ -232,7 +220,7 @@ export default function App() {
     }
   };
 
-  const scheduleTransfer = async (values) => {
+  const handleScheduleTransfer = async (values) => {
     setLoading(true);
     try {
       if (!connectedWallet || !account) {
@@ -284,7 +272,7 @@ export default function App() {
 
   const handleViewTransfer = (transfer) => {
     setSelectedTransfer(transfer);
-    setModalVisible(true);
+    setTransferDetailsModalOpen(true);
   };
 
   const columns = [
@@ -505,7 +493,7 @@ export default function App() {
         <Divider />
         <Form
           form={form}
-          onFinish={scheduleTransfer}
+          onFinish={handleScheduleTransfer}
           layout="vertical"
           style={{ marginTop: 16 }}
         >
@@ -648,10 +636,13 @@ export default function App() {
             <Tag color="blue">#{selectedTransfer?.id}</Tag>
           </Space>
         }
-        open={modalVisible}
-        onCancel={() => setModalVisible(false)}
+        open={transferDetailsModalOpen}
+        onCancel={() => setTransferDetailsModalOpen(false)}
         footer={[
-          <Button key="close" onClick={() => setModalVisible(false)}>
+          <Button
+            key="close"
+            onClick={() => setTransferDetailsModalOpen(false)}
+          >
             Close
           </Button>,
         ]}
