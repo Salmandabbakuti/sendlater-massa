@@ -84,7 +84,6 @@ export class Transfer implements Serializable<Transfer> {
    * Format amount to MAS with proper decimals
    */
   getFormattedAmount(): string {
-    // Convert from smallest unit to MAS (assuming 9 decimals like ETH)
     const masAmount = formatMas(this.amount);
     return masAmount;
   }
