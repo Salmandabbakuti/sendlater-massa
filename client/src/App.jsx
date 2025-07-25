@@ -386,6 +386,14 @@ export default function App() {
           </Title>
         </Flex>
 
+        {/* Info Alert */}
+        <Alert
+          description="SendLater allows you to schedule MAS transfers to be executed at a specific future time or massa period. Perfect for recurring payments, time-locked transfers, surprise gifting, scheduled salary payments, hackathon fund distributions and many more!"
+          type="info"
+          showIcon
+          closable
+        />
+
         {/* Stats Cards */}
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={8}>
