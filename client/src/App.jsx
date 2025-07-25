@@ -36,19 +36,19 @@ import {
   formatMas,
   Address,
   U64,
-  bytesToStr,
 } from '@massalabs/massa-web3';
 import { MassaLogo } from '@massalabs/react-ui-kit';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { useWallet } from './hooks/useWallet';
+import { Transfer } from './types/Transfer';
 import './App.css';
 
 dayjs.extend(relativeTime);
 
 const { Title, Text } = Typography;
 
-const CONTRACT_ADDRESS = 'AS17YtGELtp2ug9VTAU8GLPzPHAtHzgdFty4CSwDgChBqQPDqVi3';
+const CONTRACT_ADDRESS = 'AS16qBxzJqWotMjUZQuCg3kt34ttqSqGPd6oqPRuUtbD9ohGEQMw';
 
 const massaClient = JsonRpcProvider.buildnet();
 const contract = new SmartContract(massaClient, CONTRACT_ADDRESS);
@@ -206,28 +206,23 @@ export default function App() {
             'getTransfer',
             new Args().addU64(i),
           );
-          const transferDetails = bytesToStr(transferResult.value);
 
-          if (transferDetails) {
-            const parts = transferDetails.split('|');
-            if (parts.length >= 7) {
-              // Updated to expect 7 parts with timestamps
-              transfersData.push({
-                id: i,
-                recipient: parts[0],
-                amount: parts[1],
-                scheduledPeriod: parts[2],
-                sender: parts[3],
-                executed: parts[4] === 'true',
-                createdAt: Number(parts[5]),
-                executedAt: parts[6] !== '0' ? Number(parts[6]) : null,
-              });
-            }
+          // Check if transfer data exists
+          if (transferResult.value && transferResult.value.length > 0) {
+            // Deserialize the transfer object
+            const transfer = Transfer.fromBytes(transferResult.value);
+            const transferObj = transfer.toObject();
+
+            transfersData.push({
+              id: Number(i),
+              ...transferObj,
+            });
           }
         } catch (error) {
           console.log(`Error fetching transfer ${i}:`, error);
         }
       }
+      console.log('Fetched transfers:', transfersData);
       setTransfers(transfersData);
     } catch (error) {
       console.error('Error fetching contract data:', error);
@@ -296,7 +291,7 @@ export default function App() {
     {
       title: 'ID',
       dataIndex: 'id',
-      sorter: (a, b) => Number(a.id) - Number(b.id),
+      sorter: (a, b) => a.id - b.id,
       render: (id) => <Tag color="blue">#{id}</Tag>,
     },
     {
@@ -316,7 +311,7 @@ export default function App() {
       title: 'Amount',
       dataIndex: 'amount',
       render: (amount) => <Text strong>{formatMas(amount)} MAS</Text>,
-      sorter: (a, b) => Number(a.amount) - Number(b.amount),
+      sorter: (a, b) => a.amount - b.amount,
     },
     {
       title: 'Period',
@@ -324,7 +319,7 @@ export default function App() {
       render: (period) => (
         <Text style={{ fontFamily: 'monospace' }}>{period}</Text>
       ),
-      sorter: (a, b) => Number(a.scheduledPeriod) - Number(b.scheduledPeriod),
+      sorter: (a, b) => a.scheduledPeriod - b.scheduledPeriod,
     },
     {
       title: 'Status',
