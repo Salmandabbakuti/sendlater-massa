@@ -1,4 +1,10 @@
-import { Args, DeserializedResult, Serializable } from '@massalabs/massa-web3';
+import {
+  Args,
+  Mas,
+  DeserializedResult,
+  Serializable,
+  formatMas,
+} from '@massalabs/massa-web3';
 
 /**
  * Transfer class for TypeScript client-side serialization/deserialization
@@ -79,8 +85,8 @@ export class Transfer implements Serializable<Transfer> {
    */
   getFormattedAmount(): string {
     // Convert from smallest unit to MAS (assuming 9 decimals like ETH)
-    const masAmount = Number(this.amount) / 1e9;
-    return masAmount.toFixed(4);
+    const masAmount = formatMas(this.amount);
+    return masAmount;
   }
 
   /**

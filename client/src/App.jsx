@@ -210,11 +210,10 @@ export default function App() {
           console.log(`Error fetching transfer ${i}:`, error);
         }
       }
-      console.log('Fetched transfers:', transfersData);
       setTransfers(transfersData);
     } catch (error) {
       console.error('Error fetching contract data:', error);
-      message.error('Failed to fetch contract data');
+      message.error('Failed to fetch contract data. Please try again later.');
     } finally {
       setDataLoading(false);
     }
