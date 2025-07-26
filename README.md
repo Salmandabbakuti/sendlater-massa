@@ -261,7 +261,6 @@ cd client
 
 # Build the frontend
 npm run build
-npm run build
 
 # Upload to DeWeb (vite project)
 npx @massalabs/deweb-cli upload dist
