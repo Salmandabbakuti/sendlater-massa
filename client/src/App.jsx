@@ -46,7 +46,6 @@ dayjs.extend(relativeTime);
 const { Title, Text } = Typography;
 
 export default function App() {
-  const { connectedWallet, account } = useWallet();
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
   const [transfers, setTransfers] = useState([]);
@@ -59,6 +58,8 @@ export default function App() {
   const [selectedTransfer, setSelectedTransfer] = useState(null);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [calculatedPeriod, setCalculatedPeriod] = useState(null);
+
+  const { account } = useWallet();
 
   // Form validation functions
   const validateRecipientAddress = async (_, value) => {
@@ -220,20 +221,9 @@ export default function App() {
   };
 
   const handleScheduleTransfer = async (values) => {
+    if (!account) return message.error('Please connect a wallet first.');
     setLoading(true);
     try {
-      if (!connectedWallet || !account) {
-        message.error('No wallet connected. Please connect a wallet first.');
-        return;
-      }
-
-      const accounts = await connectedWallet.accounts();
-      if (!accounts || accounts.length === 0) {
-        message.error('No accounts found in the connected wallet.');
-        return;
-      }
-
-      const provider = accounts[0];
       const amountInMas = parseMas(values.amount);
       const scheduledPeriod = U64.fromNumber(values.scheduledPeriod);
 
@@ -241,7 +231,7 @@ export default function App() {
         .addString(values.recipient)
         .addU64(scheduledPeriod);
 
-      const scheduleOp = await provider.callSC({
+      const scheduleOp = await account.callSC({
         func: 'scheduleTransfer',
         target: CONTRACT_ADDRESS,
         parameter: args,
