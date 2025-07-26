@@ -2,10 +2,10 @@
 
 ## 🌟 Overview
 
-SendLater is a revolutionary DeFi application that brings scheduling capabilities to cryptocurrency transfers on the Massa blockchain. Whether you want to make recurring payments, implement vesting schedules, or simply schedule a transfer, SendLater provides a secure and user-friendly solution. Set it and forget it - your transfers will execute automatically at the specified time.
+SendLater is a revolutionary DeFi DApp that brings scheduling capabilities to cryptocurrency transfers on the Massa blockchain. Whether you want to make recurring payments, implement vesting schedules, or simply schedule a transfer, SendLater provides a secure and user-friendly solution. Set it and forget it - your transfers will execute automatically at the specified time.
 
 **What SendLater Does Today:**
-- **Schedule Future Transfers**: Set up MAS token transfers to execute at any future date and time
+- **Schedule Future Transfers**: Set up MAS token transfers to execute at any future date and time. Perfect for recurring payments, time-locked transfers, surprise gifting, scheduled salary payments, hackathon fund distributions and many more!
 - **Autonomous Execution**: Transfers execute automatically using Massa's unique async smart contract capabilities
 - **Transfer Management**: View, track, and monitor all your scheduled transfers in real-time
 - **Secure & Transparent**: All transfers are recorded on-chain with complete audit trails
@@ -218,7 +218,8 @@ Returns bytes representation of the number of transfers ever scheduled.
 #### `getTransfer(binaryArgs: StaticArray<u8>): StaticArray<u8>`
 Retrieves detailed information about a specific transfer.
 
-**Returns:** Pipe-separated bytes string containing:
+**Returns:** Serialized Transfer bytes string containing:
+- Transfer ID
 - Recipient address
 - Transfer amount
 - Scheduled period
@@ -294,23 +295,57 @@ To assign a MNS to your website navigate to [Massa Name Service](https://mns.mas
 
 ### V0.1.0
 - Initial release with core features
+- Frontend interface with comprehensive wallet integration
 - Basic transfer scheduling
 - Transfers List and Details
 - Automatic execution of scheduled transfers
-- Frontend interface with wallet integration
 - Realtime transfer status updates
 - Added transfer details page
+- Stats Dashboard
+- Dweb deployment
 
 ## 🗺️ Roadmap
 
 ### Phase 1: Core Features (✅ Completed)
-- [x] Basic transfer scheduling
-- [x] Transfers List and Details
-- [x] Automatic execution of scheduled transfers
-- [x] Frontend interface with wallet integration
-- [x] Realtime transfer status updates
+1. [x] Initial release with core features
+2. [x] Frontend interface with comprehensive wallet integration
+3. [x] Basic transfer scheduling
+4. [x] Transfers List and Details
+5. [x] Automatic execution of scheduled transfers
+6. [x] Realtime transfer status updates
+7. [x] Stats Dashboard
+8. [x] Dweb deployment
 
-### Phase 2: TBD
+### Phase 2: Enhanced Transfer Management
+- ✏️ **Edit Scheduled Transfers**: Modify recipient, amount, and timing for pending transfers
+- ❌ **Cancel/Delete Schedules**: Remove unwanted scheduled transfers before execution
+- 🔄 **Recurring Transfers**: Set up automatic repeating payments (daily, weekly, monthly)
+- ⏰ **Flexible Scheduling**: Support for both timestamp and block-based scheduling
+
+### Phase 3: Multi-Recipient Features
+- 💰 **Transfer Pools**: Create pools with multiple recipients and automatic distribution
+- 🪂 **Airdrop Manager**: Efficient batch transfers to hundreds of addresses
+- 🏆 **Prize Distributions**: Tournament and contest prize allocation systems
+- 💼 **Grant Distribution**: Multi-stage funding releases for projects
+
+### Phase 4: Advanced Automation
+- 🔗 **Conditional Transfers**: Execute transfers based on external conditions
+- 📊 **Transfer Analytics**: Detailed statistics and history tracking
+- 🔔 **Smart Notifications**: Email/SMS alerts for transfer execution
+- 🛡️ **Transfer Insurance**: Optional protection against failed transactions
+
+### Phase 5: DeFi Integration
+- 🏦 **Yield Farming Integration**: Auto-compound rewards while waiting
+- 💱 **Multi-Token Support**: Schedule transfers for various Massa tokens
+- 🤝 **Cross-Chain Bridges**: Schedule transfers across different blockchains
+- 📈 **Dollar-Cost Averaging**: Automated investment strategies
+
+### Phase 6: User Experience & Developer Tools
+- 📱 **Mobile App**: Native iOS and Android applications
+- 🎨 **Custom Templates**: Pre-built templates for common use cases
+- 👥 **Team Management**: Multi-signature scheduled transfers
+- 🔌 **API Integration**: REST API for third-party integrations
+- 📚 **SDK Development**: JavaScript/TypeScript SDK for developers
 
 
 ## 📚 References
