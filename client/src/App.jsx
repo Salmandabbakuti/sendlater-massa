@@ -222,6 +222,8 @@ export default function App() {
 
   const handleScheduleTransfer = async (values) => {
     if (!account) return message.error('Please connect a wallet first.');
+    if (account?.networkName !== 'buildnet')
+      return message.error('Please switch to the Massa buildnet!');
     setLoading(true);
     try {
       const amountInMas = parseMas(values.amount);

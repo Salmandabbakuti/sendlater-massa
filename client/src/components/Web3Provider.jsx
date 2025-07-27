@@ -43,6 +43,10 @@ export default function Web3Provider({ children }) {
             const balance = await primaryAccount.balance(true);
             const balanceString = `${formatMas(balance || 0n)} MAS`;
             primaryAccount.balanceString = balanceString; // Add balance to account object
+            // fetch network info
+            const networkInfos = await primaryAccount.networkInfos();
+            primaryAccount.networkName = networkInfos?.name || '';
+            primaryAccount.chainId = networkInfos?.chainId || '';
             setAccount(primaryAccount); // Store the account object
             setConnectedWallet(wallet);
             console.log('Found existing connection:', primaryAccount);
@@ -85,6 +89,10 @@ export default function Web3Provider({ children }) {
         const balance = await primaryAccount.balance(true);
         const balanceString = `${formatMas(balance || 0n)} MAS`;
         primaryAccount.balanceString = balanceString; // Add balance to account object
+        // fetch network info
+        const networkInfos = await primaryAccount.networkInfos();
+        primaryAccount.networkName = networkInfos?.name || '';
+        primaryAccount.chainId = networkInfos?.chainId || '';
         setAccount(primaryAccount); // Store the account object
         setConnectedWallet(wallet);
         message.success(`Already connected to ${walletName}!`);
@@ -100,6 +108,10 @@ export default function Web3Provider({ children }) {
 
         if (accounts && accounts.length > 0) {
           const primaryAccount = accounts[0];
+          // fetch network info
+          const networkInfos = await primaryAccount.networkInfos();
+          primaryAccount.networkName = networkInfos?.name || '';
+          primaryAccount.chainId = networkInfos?.chainId || '';
           setAccount(primaryAccount); // Store the account object
           setConnectedWallet(wallet);
 

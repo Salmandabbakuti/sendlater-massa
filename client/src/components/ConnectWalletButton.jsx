@@ -6,6 +6,7 @@ import {
   Avatar,
   Space,
   Badge,
+  Tag,
 } from 'antd';
 import {
   WalletOutlined,
@@ -44,6 +45,8 @@ export default function ConnectWalletButton() {
       return '/metamask-logo.svg';
     } else if (name.includes('massa')) {
       return '/massa-wallet-logo.svg';
+    } else if (name.includes('bearby')) {
+      return '/bearby-logo.svg'; // Placeholder for bearby logo
     }
     return null;
   };
@@ -79,7 +82,7 @@ export default function ConnectWalletButton() {
       key: 'wallet-info',
       label: (
         <div style={{ minWidth: 200, padding: '12px 0', textAlign: 'center' }}>
-          <Space direction="vertical" size={12} style={{ width: '100%' }}>
+          <Space direction="vertical" style={{ width: '100%' }}>
             {/* Avatar with wallet badge */}
             <Badge
               count={
@@ -118,6 +121,19 @@ export default function ConnectWalletButton() {
             >
               {formatAddress(account?.address)}
             </Text>
+
+            {/* Network Name */}
+            {account?.networkName && (
+              <Tag
+                color={
+                  account?.networkName?.toLowerCase() === 'mainnet'
+                    ? 'green'
+                    : 'blue'
+                }
+              >
+                {account?.networkName?.toUpperCase()}
+              </Tag>
+            )}
 
             {/* Balance */}
             <Text
