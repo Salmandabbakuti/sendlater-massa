@@ -26,6 +26,9 @@ export default function Web3Provider({ children }) {
               break;
             }
           } catch {
+            console.error(
+              `Failed to check accounts for wallet: ${wallet.name()}`,
+            );
             // Wallet not connected, continue checking others
             continue;
           }

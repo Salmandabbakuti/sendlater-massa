@@ -66,7 +66,7 @@ export default function ConnectWalletButton() {
   // Create dropdown menu items for multiple wallets
   const walletMenuItems =
     wallets?.map((wallet, index) => ({
-      key: index.toString(),
+      key: `wallet-${index}`,
       label: wallet.name() || `Wallet ${index + 1}`,
       icon: getWalletIcon(wallet.name()),
       onClick: () => handleConnectWallet(index),
