@@ -83,3 +83,8 @@ export class Transfer {
     };
   }
 }
+
+export const ellipsisString = (str, start = 6, end = 4) => {
+  if (!str || str.length <= start + end) return str;
+  return `${str.slice(0, start)}...${str.slice(-end)}`;
+};
