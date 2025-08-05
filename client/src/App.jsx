@@ -32,7 +32,7 @@ import { Args, parseMas, formatMas, Address, U64 } from '@massalabs/massa-web3';
 import { MassaLogo } from '@massalabs/react-ui-kit';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { useWallet } from './hooks/useWallet';
+import { useAccountStore } from '@massalabs/react-ui-kit';
 import { Transfer, massaProvider, contract } from './utils';
 import {
   MASSA_PERIOD_DURATION,
@@ -59,7 +59,7 @@ export default function App() {
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [calculatedPeriod, setCalculatedPeriod] = useState(null);
 
-  const { account } = useWallet();
+  const { connectedAccount: account, balance, network } = useAccountStore();
 
   // Form validation functions
   const validateRecipientAddress = async (_, value) => {
@@ -222,7 +222,7 @@ export default function App() {
 
   const handleScheduleTransfer = async (values) => {
     if (!account) return message.error('Please connect a wallet first.');
-    if (account?.networkName !== 'buildnet')
+    if (network?.name !== 'buildnet')
       return message.error('Please switch to the Massa buildnet!');
     setLoading(true);
     try {
@@ -515,11 +515,9 @@ export default function App() {
               label={
                 <Space>
                   Amount (MAS)
-                  {account?.balanceString && (
-                    <Text type="secondary" style={{ fontSize: '12px' }}>
-                      (Balance: {account.balanceString})
-                    </Text>
-                  )}
+                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                    (Balance: {formatMas(balance || 0n)} MAS)
+                  </Text>
                 </Space>
               }
               rules={[{ validator: validateAmount }]}
@@ -569,12 +567,12 @@ export default function App() {
                 description={
                   <div>
                     <p>
-                      <strong>Target Period:</strong>{' '}
-                      {calculatedPeriod.targetPeriod} (±{PERIOD_BUFFER} buffer)
-                    </p>
-                    <p>
                       <strong>Periods to add:</strong>{' '}
                       {calculatedPeriod.periodsToAdd + PERIOD_BUFFER}
+                    </p>
+                    <p>
+                      <strong>Target Period:</strong>{' '}
+                      {calculatedPeriod.targetPeriod} (±{PERIOD_BUFFER} buffer)
                     </p>
                     <p>
                       <strong>Estimated execution:</strong>{' '}

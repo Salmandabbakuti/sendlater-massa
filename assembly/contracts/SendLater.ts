@@ -7,6 +7,7 @@ import {
   transferCoins,
   balance,
   Address,
+  validateAddress,
 } from '@massalabs/massa-as-sdk';
 import {
   stringToBytes,
@@ -80,7 +81,7 @@ export function constructor(): void {
     'Constructor can only be called during deployment',
   );
   Storage.set(TRANSFER_COUNT_KEY, u64ToBytes(0));
-  generateEvent('ScheduledTransfer contract initialized');
+  generateEvent(`ContractInitialized|${Context.timestamp()}`);
 }
 
 /**
@@ -98,15 +99,12 @@ export function scheduleTransfer(binaryArgs: StaticArray<u8>): void {
   const amount = Context.transferredCoins();
 
   // Validate inputs
-  if (amount === 0) {
-    generateEvent('Error: No coins transferred');
-    return;
-  }
-
-  if (scheduledPeriod <= Context.currentPeriod()) {
-    generateEvent('Error: Scheduled period must be in the future');
-    return;
-  }
+  assert(validateAddress(recipient), 'Invalid recipient address');
+  assert(amount > 0, 'Transfer amount must be greater than zero');
+  assert(
+    scheduledPeriod > Context.currentPeriod(),
+    'Scheduled period must be in the future',
+  );
 
   // Get current transfer count
   const currentCount = _getTransferCount();
@@ -147,8 +145,7 @@ export function scheduleTransfer(binaryArgs: StaticArray<u8>): void {
   );
 
   generateEvent(
-    `Transfer scheduled: ID ${transferId}, Amount: ${amount}, ` +
-      `Recipient: ${recipient}, Period: ${scheduledPeriod}, Created: ${createdAt}`,
+    `TransferScheduled|${transferId}|${sender}|${recipient}|${amount}|${scheduledPeriod}|${createdAt}`,
   );
 }
 
@@ -162,35 +159,37 @@ export function executeTransfer(binaryArgs: StaticArray<u8>): void {
   generateEvent(`Executing transfer with ID: ${transferId}`);
   const transferKey = stringToBytes(`transfer_${transferId}`);
 
-  if (!Storage.has(transferKey)) {
-    generateEvent(`Error: Transfer ${transferId} not found`);
-    return;
-  }
+  // check if the caller is the contract itself
+  assert(
+    Context.caller() == Context.callee(),
+    'Only the contract can execute transfers',
+  );
+
+  assert(Storage.has(transferKey), `Transfer with id ${transferId} not found`);
 
   // Deserialize the transfer object
   const transferData = Storage.get(transferKey);
   const transfer = new Transfer();
   transfer.deserialize(transferData, 0);
 
-  if (transfer.executed) {
-    generateEvent(`Error: Transfer ${transferId} already executed`);
-    return;
-  }
+  // Check if the transfer is already executed
+  assert(!transfer.executed, `Transfer with id ${transferId} already executed`);
 
   // Execute the transfer
   const recipientAddress = new Address(transfer.recipient);
   transferCoins(recipientAddress, transfer.amount);
 
+  const timestamp = Context.timestamp();
   // Mark as executed with execution timestamp
   transfer.executed = true;
-  transfer.executedAt = Context.timestamp();
+  transfer.executedAt = timestamp;
 
   // Store the updated transfer
   Storage.set(transferKey, transfer.serialize());
 
+  // Emit an event for the transfer execution
   generateEvent(
-    `Transfer executed: ID ${transferId}, Amount: ${transfer.amount} ` +
-      `sent to ${transfer.recipient}, Executed: ${transfer.executedAt}`,
+    `TransferExecuted|${transferId}|${transfer.recipient}|${transfer.amount}|${timestamp}`,
   );
 }
 
