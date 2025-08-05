@@ -61,7 +61,7 @@ export default function SiteLayout({ children }) {
         >
           ©{new Date().getFullYear()} SendLater. Powered by Massa
         </a>
-        <p style={{ fontSize: '12px' }}>v0.2.0</p>
+        <p style={{ fontSize: '12px' }}>v0.2.1</p>
       </Footer>
     </Layout>
   );

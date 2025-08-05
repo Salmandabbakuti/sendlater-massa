@@ -454,6 +454,7 @@ export default function App() {
               onClick: () => handleViewTransfer(record),
             })}
             dataSource={transfers}
+            loading={transferCount === 0 && dataLoading}
             rowKey="id"
             pagination={{
               responsive: true,
@@ -501,7 +502,10 @@ export default function App() {
               name="recipient"
               label="Recipient Address"
               hasFeedback
-              rules={[{ validator: validateRecipientAddress }]}
+              rules={[
+                { required: true },
+                { validator: validateRecipientAddress },
+              ]}
             >
               <Input
                 placeholder="Recipient Address (AS1... or AU1...)"
@@ -520,7 +524,7 @@ export default function App() {
                   </Text>
                 </Space>
               }
-              rules={[{ validator: validateAmount }]}
+              rules={[{ required: true }, { validator: validateAmount }]}
             >
               <Input type="number" step="0.001" placeholder="Amount (MAS)" />
             </Form.Item>
@@ -597,7 +601,10 @@ export default function App() {
               label="Scheduled Period (Advanced)"
               hasFeedback
               extra={`Current period: ${currentPeriod}. Each period = ${MASSA_PERIOD_DURATION}s. You can manually override the calculated period.`}
-              rules={[{ validator: validateScheduledPeriod }]}
+              rules={[
+                { required: true },
+                { validator: validateScheduledPeriod },
+              ]}
             >
               <Input type="number" placeholder={`Period (>${currentPeriod})`} />
             </Form.Item>
