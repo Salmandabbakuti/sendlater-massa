@@ -192,7 +192,7 @@ export default function App() {
 
       // Fetch transfers in desc order (newest first)
       const transfersData = [];
-      for (let i = transferCount; i >= 1; i--) {
+      for (let i = transferCount; i >= 1n; i--) {
         try {
           const transferResult = await contract.read(
             'getTransfer',
