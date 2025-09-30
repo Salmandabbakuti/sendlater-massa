@@ -150,6 +150,43 @@ export function scheduleTransfer(binaryArgs: StaticArray<u8>): void {
 }
 
 /**
+ * Cancel a scheduled transfer and refund the sender
+ * Resets the scheduled period to 0 on cancelling
+ */
+export function cancelTransfer(binaryArgs: StaticArray<u8>): void {
+  const transferId = new Args(binaryArgs)
+    .nextU64()
+    .expect('Transfer ID argument is missing or invalid');
+  const transferKey = stringToBytes(`transfer_${transferId}`);
+
+  // Check if the transfer exists
+  assert(Storage.has(transferKey), `Transfer with id ${transferId} not found`);
+
+  // Deserialize the transfer object
+  const transferData = Storage.get(transferKey);
+  const transfer = new Transfer();
+  transfer.deserialize(transferData, 0);
+
+  // check if caller is the sender of transfer
+  const caller = Context.caller().toString();
+  assert(caller === transfer.sender, `Only sender can cancel the transfer`);
+
+  // Check if the transfer is already executed
+  assert(!transfer.executed, `Transfer with id ${transferId} already executed`);
+
+  // set scheduled period to 0 to cancel
+  transfer.scheduledPeriod = 0;
+
+  // Store the updated transfer
+  Storage.set(transferKey, transfer.serialize());
+
+  // Refund the sender
+  const senderAddress = new Address(transfer.sender);
+  transferCoins(senderAddress, transfer.amount);
+  generateEvent(`TransferCancelled|${transferId}`);
+}
+
+/**
  * Execute a scheduled transfer
  */
 export function executeTransfer(binaryArgs: StaticArray<u8>): void {
@@ -171,6 +208,12 @@ export function executeTransfer(binaryArgs: StaticArray<u8>): void {
   const transferData = Storage.get(transferKey);
   const transfer = new Transfer();
   transfer.deserialize(transferData, 0);
+
+  // Check if the transfer is scheduled
+  assert(
+    transfer.scheduledPeriod > 0,
+    `Transfer with id ${transferId} is not scheduled`,
+  );
 
   // Check if the transfer is already executed
   assert(!transfer.executed, `Transfer with id ${transferId} already executed`);

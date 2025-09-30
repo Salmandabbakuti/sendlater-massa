@@ -19,6 +19,8 @@ import {
   Flex,
   Spin,
   Descriptions,
+  Checkbox,
+  Popconfirm,
 } from 'antd';
 import {
   ClockCircleOutlined,
@@ -27,6 +29,9 @@ import {
   EyeOutlined,
   PlusOutlined,
   SyncOutlined,
+  CloseCircleOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
 } from '@ant-design/icons';
 import { Args, parseMas, formatMas, Address, U64 } from '@massalabs/massa-web3';
 import { MassaLogo } from '@massalabs/react-ui-kit';
@@ -58,6 +63,7 @@ export default function App() {
   const [selectedTransfer, setSelectedTransfer] = useState(null);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [calculatedPeriod, setCalculatedPeriod] = useState(null);
+  const [showMyTransfersOnly, setShowMyTransfersOnly] = useState(false);
 
   const { connectedAccount: account, balance, network } = useAccountStore();
 
@@ -255,6 +261,31 @@ export default function App() {
     }
   };
 
+  const handleCancelTransfer = async (transferId) => {
+    if (!account) return message.error('Please connect a wallet first.');
+    if (network?.name !== 'buildnet')
+      return message.error('Please switch to the Massa buildnet!');
+
+    try {
+      const args = new Args().addU64(U64.fromNumber(transferId));
+
+      const cancelOp = await account.callSC({
+        func: 'cancelTransfer',
+        target: CONTRACT_ADDRESS,
+        parameter: args,
+      });
+
+      console.log('Cancel operation result:', cancelOp);
+      await cancelOp.waitSpeculativeExecution();
+      message.success('Transfer cancelled successfully!');
+      setTransferDetailsModalOpen(false);
+      setTimeout(fetchContractData, 2000);
+    } catch (error) {
+      console.error('Error cancelling transfer:', error);
+      message.error('Failed to cancel transfer: ' + error.message);
+    }
+  };
+
   useEffect(() => {
     fetchContractData();
     const interval = setInterval(fetchContractData, 30000);
@@ -265,6 +296,17 @@ export default function App() {
     setSelectedTransfer(transfer);
     setTransferDetailsModalOpen(true);
   };
+
+  // Filter transfers based on the toggle
+  const filteredTransfers =
+    showMyTransfersOnly && account?.address
+      ? transfers.filter(
+          (transfer) =>
+            transfer.sender?.toLowerCase() === account.address?.toLowerCase() ||
+            transfer.recipient?.toLowerCase() ===
+              account.address?.toLowerCase(),
+        )
+      : transfers;
 
   const columns = [
     {
@@ -304,13 +346,36 @@ export default function App() {
       title: 'Status',
       key: 'status',
       render: (_, record) => {
-        if (record.executed) {
-          return <Tag color="success">Executed</Tag>;
+        const isOutgoing =
+          account?.address?.toLowerCase() === record.sender?.toLowerCase();
+        const isIncoming =
+          account?.address?.toLowerCase() === record.recipient?.toLowerCase();
+
+        let statusTag;
+        if (record.scheduledPeriod === 0) {
+          statusTag = <Tag color="error">Cancelled</Tag>;
+        } else if (record.executed) {
+          statusTag = <Tag color="success">Executed</Tag>;
         } else if (Number(record.scheduledPeriod) <= currentPeriod) {
-          return <Tag color="warning">Ready</Tag>;
+          statusTag = <Tag color="warning">Ready</Tag>;
         } else {
-          return <Tag color="processing">Pending</Tag>;
+          statusTag = <Tag color="processing">Pending</Tag>;
         }
+
+        return (
+          <Space wrap>
+            {statusTag}
+            {(isOutgoing || isIncoming) && (
+              <Tag
+                color={isOutgoing ? 'blue' : 'green'}
+                icon={isOutgoing ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
+                style={{ fontSize: '11px' }}
+              >
+                {isOutgoing ? 'Outgoing' : 'Incoming'}
+              </Tag>
+            )}
+          </Space>
+        );
       },
     },
     {
@@ -318,6 +383,14 @@ export default function App() {
       key: 'estimatedExecution',
       sorter: (a, b) => a?.executedAt - b?.executedAt,
       render: (_, record) => {
+        if (record.scheduledPeriod === 0) {
+          return (
+            <Text type="secondary" style={{ fontStyle: 'italic' }}>
+              Cancelled
+            </Text>
+          );
+        }
+
         if (record.executed) {
           return record.executedAt ? (
             dayjs(record.executedAt).format('MMM D, YYYY h:mm:ss A')
@@ -353,12 +426,37 @@ export default function App() {
       title: 'Actions',
       key: 'actions',
       render: (_, record) => (
-        <Button
-          type="text"
-          shape="circle"
-          icon={<EyeOutlined />}
-          onClick={() => handleViewTransfer(record)}
-        />
+        <Space>
+          <Button
+            type="text"
+            shape="circle"
+            icon={<EyeOutlined />}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleViewTransfer(record);
+            }}
+            title="View Details"
+          />
+          {!record.executed &&
+            record.scheduledPeriod !== 0 &&
+            account?.address?.toLowerCase() ===
+              record.sender?.toLowerCase() && (
+              <Popconfirm
+                title="Are you sure you want to cancel this transfer?"
+                onConfirm={() => handleCancelTransfer(record.id)}
+                okText="Yes"
+                cancelText="No"
+              >
+                <Button
+                  type="text"
+                  shape="circle"
+                  icon={<CloseCircleOutlined />}
+                  title="Cancel Transfer"
+                  danger
+                />
+              </Popconfirm>
+            )}
+        </Space>
       ),
     },
   ];
@@ -425,9 +523,16 @@ export default function App() {
 
         {/* Transfers Table */}
         <Card
-          title={`Scheduled Transfers (${transfers.length})`}
+          title={`Scheduled Transfers (${filteredTransfers.length})`}
           extra={
             <Space>
+              <Checkbox
+                checked={showMyTransfersOnly}
+                onChange={(e) => setShowMyTransfersOnly(e.target.checked)}
+                disabled={!account?.address}
+              >
+                Owned by Me
+              </Checkbox>
               <Button
                 type="primary"
                 shape="round"
@@ -451,9 +556,15 @@ export default function App() {
             style={{ cursor: 'pointer' }}
             columns={columns}
             onRow={(record) => ({
-              onClick: () => handleViewTransfer(record),
+              onClick: (event) => {
+                // Check if click was on action buttons
+                if (event.target.closest('.ant-btn')) {
+                  return;
+                }
+                handleViewTransfer(record);
+              },
             })}
-            dataSource={transfers}
+            dataSource={filteredTransfers}
             loading={transferCount === 0 && dataLoading}
             rowKey="id"
             pagination={{
@@ -502,10 +613,7 @@ export default function App() {
               name="recipient"
               label="Recipient Address"
               hasFeedback
-              rules={[
-                { required: true },
-                { validator: validateRecipientAddress },
-              ]}
+              rules={[{ validator: validateRecipientAddress }]}
             >
               <Input
                 placeholder="Recipient Address (AS1... or AU1...)"
@@ -524,7 +632,7 @@ export default function App() {
                   </Text>
                 </Space>
               }
-              rules={[{ required: true }, { validator: validateAmount }]}
+              rules={[{ validator: validateAmount }]}
             >
               <Input type="number" step="0.001" placeholder="Amount (MAS)" />
             </Form.Item>
@@ -601,10 +709,7 @@ export default function App() {
               label="Scheduled Period (Advanced)"
               hasFeedback
               extra={`Current period: ${currentPeriod}. Each period = ${MASSA_PERIOD_DURATION}s. You can manually override the calculated period.`}
-              rules={[
-                { required: true },
-                { validator: validateScheduledPeriod },
-              ]}
+              rules={[{ validator: validateScheduledPeriod }]}
             >
               <Input type="number" placeholder={`Period (>${currentPeriod})`} />
             </Form.Item>
@@ -643,13 +748,29 @@ export default function App() {
         open={transferDetailsModalOpen}
         onCancel={() => setTransferDetailsModalOpen(false)}
         footer={[
+          selectedTransfer &&
+            !selectedTransfer.executed &&
+            selectedTransfer.scheduledPeriod !== 0 &&
+            account?.address?.toLowerCase() ===
+              selectedTransfer.sender?.toLowerCase() && (
+              <Popconfirm
+                title="Are you sure you want to cancel this transfer?"
+                onConfirm={() => handleCancelTransfer(selectedTransfer.id)}
+                okText="Yes"
+                cancelText="No"
+              >
+                <Button key="cancel" danger icon={<CloseCircleOutlined />}>
+                  Cancel Transfer
+                </Button>
+              </Popconfirm>
+            ),
           <Button
             key="close"
             onClick={() => setTransferDetailsModalOpen(false)}
           >
             Close
           </Button>,
-        ]}
+        ].filter(Boolean)}
         width={600}
       >
         {selectedTransfer && (
@@ -712,13 +833,47 @@ export default function App() {
                   {
                     key: 'status',
                     label: 'Status',
-                    children: selectedTransfer.executed ? (
-                      <Tag color="success">Executed</Tag>
-                    ) : selectedTransfer.scheduledPeriod <= currentPeriod ? (
-                      <Tag color="warning">Ready</Tag>
-                    ) : (
-                      <Tag color="processing">Pending</Tag>
-                    ),
+                    children: (() => {
+                      const isOutgoing =
+                        account?.address?.toLowerCase() ===
+                        selectedTransfer.sender?.toLowerCase();
+                      const isIncoming =
+                        account?.address?.toLowerCase() ===
+                        selectedTransfer.recipient?.toLowerCase();
+
+                      let statusTag;
+                      if (selectedTransfer.scheduledPeriod === 0) {
+                        statusTag = <Tag color="error">Cancelled</Tag>;
+                      } else if (selectedTransfer.executed) {
+                        statusTag = <Tag color="success">Executed</Tag>;
+                      } else if (
+                        selectedTransfer.scheduledPeriod <= currentPeriod
+                      ) {
+                        statusTag = <Tag color="warning">Ready</Tag>;
+                      } else {
+                        statusTag = <Tag color="processing">Pending</Tag>;
+                      }
+
+                      return (
+                        <Space>
+                          {statusTag}
+                          {(isOutgoing || isIncoming) && (
+                            <Tag
+                              color={isOutgoing ? 'blue' : 'green'}
+                              icon={
+                                isOutgoing ? (
+                                  <ArrowUpOutlined />
+                                ) : (
+                                  <ArrowDownOutlined />
+                                )
+                              }
+                            >
+                              {isOutgoing ? 'Outgoing' : 'Incoming'}
+                            </Tag>
+                          )}
+                        </Space>
+                      );
+                    })(),
                   },
                   {
                     key: 'created',
@@ -745,7 +900,14 @@ export default function App() {
                         size={0}
                         style={{ textAlign: 'right' }}
                       >
-                        {selectedTransfer.executed ? (
+                        {selectedTransfer.scheduledPeriod === 0 ? (
+                          <Text
+                            type="secondary"
+                            style={{ fontStyle: 'italic' }}
+                          >
+                            Cancelled
+                          </Text>
+                        ) : selectedTransfer.executed ? (
                           selectedTransfer.executedAt ? (
                             <>
                               <Text strong>
@@ -789,23 +951,24 @@ export default function App() {
               />
 
               {/* Network timing note for pending transfers */}
-              {!selectedTransfer.executed && (
-                <div
-                  style={{
-                    marginTop: 12,
-                    paddingTop: 12,
-                    borderTop: '1px solid #f0f0f0',
-                  }}
-                >
-                  <Text type="secondary" style={{ fontSize: '12px' }}>
-                    <em>
-                      Note: Execution time may vary by ±{' '}
-                      {PERIOD_BUFFER * MASSA_PERIOD_DURATION} sec due to network
-                      timing
-                    </em>
-                  </Text>
-                </div>
-              )}
+              {!selectedTransfer.executed &&
+                selectedTransfer.scheduledPeriod !== 0 && (
+                  <div
+                    style={{
+                      marginTop: 12,
+                      paddingTop: 12,
+                      borderTop: '1px solid #f0f0f0',
+                    }}
+                  >
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      <em>
+                        Note: Execution time may vary by ±{' '}
+                        {PERIOD_BUFFER * MASSA_PERIOD_DURATION} sec due to
+                        network timing
+                      </em>
+                    </Text>
+                  </div>
+                )}
             </Card>
           </Space>
         )}
