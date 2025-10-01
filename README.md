@@ -278,7 +278,7 @@ To assign a MNS to your website navigate to [Massa Name Service](https://mns.mas
 
 | Network | Contract Address | Explorer Link |
 |---------|------------------|---------------|
-| Massa Testnet | `AS1JwGjhqt1s3VWk8VsQ92TG84Mne8MM2YXUS2zAQ1crYGkoyCBf` | [View on Explorer](https://buildnet-explorer.massa.net/#explorer?explore=AS1JwGjhqt1s3VWk8VsQ92TG84Mne8MM2YXUS2zAQ1crYGkoyCBf) |
+| Massa Testnet | `AS187aQgFrqCNxUDyMp4Hpz7qYqbb6ntP4LcAsr1h1aPuT9qDSp8` | [View on Explorer](https://buildnet-explorer.massa.net/#explorer?explore=AS187aQgFrqCNxUDyMp4Hpz7qYqbb6ntP4LcAsr1h1aPuT9qDSp8) |
 | Massa Mainnet | Coming Soon | - |
 
 ### Frontend Deployments
@@ -291,6 +291,13 @@ To assign a MNS to your website navigate to [Massa Name Service](https://mns.mas
 | Arweave | Coming Soon | 🚧 Planned |
 
 ## 📝 Changelog
+
+### v0.3.0
+- Added scheduled transfer cancellation
+- Enhanced wallet connection logic auto-connect wallet with ui-kit hooks
+- Added bearby wallet support
+- Improved error handling and user feedback on contract interactions
+- Filter transfers owned by connected account, incoming and outgoing labels
 
 ### V0.1.0
 - Initial release with core features
